@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package hackarena.platform.teams.v1;
+
+import "hackarena/platform/common/v1/types.proto";
+
+option csharp_namespace = "HackArena.Platform.Teams.V1";
+
+// Membership lifecycle status.
+enum TeamMemberStatus {
+  // Default value.
+  TEAM_MEMBER_STATUS_UNSPECIFIED = 0;
+  // Invited, not yet accepted.
+  TEAM_MEMBER_STATUS_INVITED = 1;
+  // Active member.
+  TEAM_MEMBER_STATUS_ACCEPTED = 2;
+  // Removed or left.
+  TEAM_MEMBER_STATUS_REMOVED = 3;
+}
+
+// Team registered in HackArena.
+message Team {
+  // Team identifier.
+  hackarena.platform.common.v1.Uuid id = 1;
+  // Display name.
+  string name = 2;
+  // Edition identifiers (e.g., "1", "2.5").
+  repeated string editions = 3;
+  // Members of the team.
+  repeated TeamMember members = 4;
+
+  reserved 5 to 49;
+}
+
+// Membership of a user in a team.
+message TeamMember {
+  // User identifier.
+  hackarena.platform.common.v1.Uuid id = 1;
+  // Leader flag.
+  bool is_leader = 2;
+  // Membership status.
+  TeamMemberStatus status = 3;
+
+  reserved 4 to 49;
+}
+
+// Get a team by id.
+message GetTeamRequest {
+  // Team identifier.
+  hackarena.platform.common.v1.Uuid team_id = 1;
+}
+
+// GetTeam response.
+message GetTeamResponse {
+  // Requested team.
+  Team team = 1;
+}
+
+// Get a team by user id.
+message GetTeamByUserRequest {
+  // User identifier.
+  hackarena.platform.common.v1.Uuid user_id = 1;
+  // Optional edition filter.
+  string edition = 2;
+
+  reserved 3 to 49;
+}
+
+// GetTeamByUser response.
+message GetTeamByUserResponse {
+  // Team of the requested user, if any.
+  Team team = 1;
+
+  reserved 2 to 49;
+}
+
+// List teams with optional filters.
+message ListTeamsRequest {
+  // Filter by editions.
+  repeated string editions = 1;
+  // Case-insensitive name substring query.
+  string name_query = 2;
+  // Pagination.
+  hackarena.platform.common.v1.PageRequest page = 3;
+
+  reserved 4 to 49;
+}
+
+// ListTeams response.
+message ListTeamsResponse {
+  // Teams page.
+  repeated Team teams = 1;
+  // Pagination metadata.
+  hackarena.platform.common.v1.PageResponse page = 2;
+
+  reserved 3 to 49;
+}
+
+// Get team of the authenticated user.
+message GetMyTeamRequest {
+  // Optional edition filter.
+  string edition = 1;
+
+  reserved 2 to 49;
+}
+
+// GetMyTeam response.
+message GetMyTeamResponse {
+  // The caller's team, if any.
+  Team team = 1;
+
+  reserved 2 to 49;
+}
+
+// Team read operations.
+service TeamsService {
+  // Get a team by id.
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+  // Get team of a given user.
+  rpc GetTeamByUser(GetTeamByUserRequest) returns (GetTeamByUserResponse);
+  // List teams with filters and pagination.
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse);
+  // Get the caller's team.
+  rpc GetMyTeam(GetMyTeamRequest) returns (GetMyTeamResponse);
+}

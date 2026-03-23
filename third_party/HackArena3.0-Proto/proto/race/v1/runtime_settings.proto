@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package race.v1;
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+// In-game time-of-day presets used by runtime session controls.
+enum RuntimeTimeOfDayPreset {
+  // Default/unknown value.
+  RUNTIME_TIME_OF_DAY_PRESET_UNSPECIFIED = 0;
+  // Morning lighting preset.
+  RUNTIME_TIME_OF_DAY_PRESET_MORNING = 1;
+  // Noon lighting preset.
+  RUNTIME_TIME_OF_DAY_PRESET_NOON = 2;
+  // Evening lighting preset.
+  RUNTIME_TIME_OF_DAY_PRESET_EVENING = 3;
+  // Night lighting preset.
+  RUNTIME_TIME_OF_DAY_PRESET_NIGHT = 4;
+}
+
+// Ghost mode behavior configuration.
+// Entry conditions (OR):
+// - speed <= enter_speed_max_mps for at least enter_delay_ms
+// - completed_laps < until_completed_laps
+// Exit conditions (AND):
+// - speed > exit_speed_min_mps for at least exit_delay_ms
+// - completed_laps >= until_completed_laps
+// - no vehicle overlap for this vehicle for at least vehicle_overlap_exit_delay_ms
+message GhostModeSettings {
+  // Enables/disables ghost mode logic.
+  bool enabled = 1;
+  // Maximum speed eligible for ghost-mode entry (m/s).
+  float enter_speed_max_mps = 2;
+  // Minimum speed required for ghost-mode exit, exclusive (m/s).
+  float exit_speed_min_mps = 3;
+  // Continuous time the entry speed condition must hold before enabling ghost mode.
+  uint32 enter_delay_ms = 4;
+  // Continuous time the exit speed condition must hold before disabling ghost mode.
+  uint32 exit_delay_ms = 5;
+  // Ghost mode stays enabled while completed_laps is below this value.
+  uint32 until_completed_laps = 6;
+  // Required no-overlap time before ghost mode may be disabled.
+  // Any vehicle overlap keeps ghost mode enabled.
+  // Evaluated per vehicle against that vehicle's current overlaps (not globally).
+  uint32 vehicle_overlap_exit_delay_ms = 7;
+
+}

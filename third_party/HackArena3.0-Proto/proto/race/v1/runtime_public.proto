@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package race.v1;
+
+import "google/protobuf/timestamp.proto";
+
+import "race/v1/runtime_settings.proto";
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+// Public view of an active sandbox runtime.
+message PublicSandboxRuntimeInfo {
+  // Active sandbox identifier.
+  string sandbox_id = 1;
+  // Active sandbox display name.
+  string sandbox_name = 2;
+  // Active sandbox map identifier.
+  string map_id = 3;
+  // Active in-session time-of-day preset.
+  RuntimeTimeOfDayPreset active_time_of_day_preset = 4;
+  // Active ghost mode behavior.
+  GhostModeSettings ghost_mode = 5;
+  // Number of currently connected players in this sandbox.
+  uint32 active_player_count = 6;
+
+}
+
+// Public view of official race staging phase.
+message PublicOfficialRaceStagingState {
+  // Number of participants ready to start.
+  uint32 ready_player_count = 1;
+  // Total number of participants expected to join this race.
+  uint32 expected_player_count = 2;
+
+}
+
+// Public view of official race countdown phase.
+message PublicOfficialRaceCountdownState {
+  // UTC timestamp when countdown ends and race enters running phase.
+  google.protobuf.Timestamp countdown_end_at_utc = 1;
+
+}
+
+// Public view of official race running state.
+message PublicOfficialRaceRunningState {
+  // Planned UTC datetime when running phase should end.
+  google.protobuf.Timestamp planned_end_at_utc = 1;
+
+}
+
+// Public view of official race finished state.
+message PublicOfficialRaceFinishedState {
+}
+
+// Public view of official race aborted state.
+message PublicOfficialRaceAbortedState {
+}
+
+// Public view of active official race runtime.
+message PublicOfficialRaceRuntimeInfo {
+  // Active official race display name.
+  string race_name = 1;
+  // Active official race map identifier.
+  string map_id = 2;
+  // Scheduled UTC datetime when this race entered staging phase.
+  google.protobuf.Timestamp start_time_utc = 3;
+  // Configured race duration in seconds, counted from running phase start.
+  uint32 race_duration_sec = 4;
+  // Current official race phase details.
+  oneof phase_state {
+    // Staging phase details.
+    PublicOfficialRaceStagingState staging = 5;
+    // Countdown phase details.
+    PublicOfficialRaceCountdownState countdown = 6;
+    // Running phase details.
+    PublicOfficialRaceRunningState running = 7;
+    // Finished phase details.
+    PublicOfficialRaceFinishedState finished = 8;
+    // Aborted phase details.
+    PublicOfficialRaceAbortedState aborted = 9;
+  }
+
+}
+
+// Public summary entry for an upcoming race.
+message PublicUpcomingRaceSummary {
+  // Upcoming race display name.
+  string race_name = 1;
+  // Scheduled race start datetime in UTC.
+  google.protobuf.Timestamp start_time_utc = 2;
+  // Configured race duration in seconds, counted from running phase start.
+  uint32 race_duration_sec = 3;
+
+}
+
+// Public runtime data for sandbox activity mode.
+message PublicSandboxRuntimeMode {
+  // Active sandboxes for sandbox activity mode.
+  repeated PublicSandboxRuntimeInfo sandboxes = 1;
+
+}
+
+// Public runtime state for menu rendering.
+message PublicRuntimeState {
+  // Server UTC timestamp used by frontend to render countdowns.
+  google.protobuf.Timestamp server_time_utc = 3;
+  // Active runtime mode.
+  // If unset, server is in technical break (none activity).
+  oneof active_mode {
+    // Official race runtime mode.
+    PublicOfficialRaceRuntimeInfo official_race = 4;
+    // Sandbox runtime mode.
+    PublicSandboxRuntimeMode sandbox_mode = 5;
+  }
+
+}
+
+// Public menu state for sandbox/runtime information panels.
+message PublicMenuState {
+  // Public runtime state used by menu.
+  PublicRuntimeState runtime = 1;
+  // Upcoming races in backend-defined upcoming window.
+  repeated PublicUpcomingRaceSummary upcoming_races = 2;
+
+}
+
+// Public request for current menu state.
+message GetPublicMenuStateRequest {
+}
+
+// Public response with full menu snapshot.
+message GetPublicMenuStateResponse {
+  // Current public menu state snapshot.
+  PublicMenuState state = 1;
+
+}
+
+// Public stream request for state changes.
+message StreamPublicMenuStateRequest {
+}
+
+// Public-facing API for runtime menu rendering.
+service PublicMenuService {
+  // Returns full menu snapshot.
+  rpc GetPublicMenuState(GetPublicMenuStateRequest) returns (GetPublicMenuStateResponse);
+  // Streams menu state: first event is full snapshot, then only backend state changes.
+  rpc StreamPublicMenuState(StreamPublicMenuStateRequest) returns (stream PublicMenuState);
+}

@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package achievement.v1;
+
+import "achievement/v1/achievement_types.proto";
+import "race/v1/track.proto";
+
+option csharp_namespace = "HA3.Proto.Achievement.V1";
+
+// Reason why requested stream frequency was adjusted by the server.
+enum AchievementStreamClampReason {
+  ACHIEVEMENT_STREAM_CLAMP_REASON_UNSPECIFIED = 0;
+  // Requested frequency accepted without clamping.
+  ACHIEVEMENT_STREAM_CLAMP_REASON_NONE = 1;
+  // Clamped to backend/server stream limits.
+  ACHIEVEMENT_STREAM_CLAMP_REASON_SERVER_LIMIT = 2;
+}
+
+// Runtime source for a selected active official sandbox.
+message AchievementOfficialSandboxSource {
+  // Active official sandbox identifier.
+  string sandbox_id = 1;
+
+}
+
+// Runtime source for active official race.
+message AchievementOfficialRaceSource {
+}
+
+// Explicit runtime source in achievement stream payloads.
+message AchievementRuntimeSource {
+  oneof source {
+    AchievementOfficialRaceSource official_race = 1;
+    AchievementOfficialSandboxSource official_sandbox = 2;
+  }
+
+}
+
+// Request for aggregated achievement runtime stream.
+message StreamAchievementRuntimeRequest {
+  // Requested stream frequency for snapshot events.
+  uint32 requested_hz = 1;
+
+}
+
+// Server-acknowledged stream configuration.
+message AchievementStreamSettings {
+  uint32 requested_hz = 1;
+  uint32 effective_hz = 2;
+  AchievementStreamClampReason clamp_reason = 3;
+
+}
+
+// Runtime source descriptor with static map geometry.
+message AchievementRuntimeSourceDescriptor {
+  // Source key.
+  AchievementRuntimeSource source = 1;
+  // Current map for this source.
+  string map_id = 2;
+  // Static track geometry for current map.
+  race.v1.TrackData track_data = 3;
+
+}
+
+// One-time bootstrap payload for stream session.
+message AchievementRuntimeBootstrap {
+  // Sources active at stream start.
+  repeated AchievementRuntimeSourceDescriptor sources = 1;
+
+}
+
+// Runtime topology change event.
+message AchievementRuntimeTopologyUpdate {
+  // Newly activated sources.
+  repeated AchievementRuntimeSourceDescriptor upserted_sources = 1;
+
+}
+
+// Snapshot for one runtime source.
+message AchievementSourceSnapshot {
+  AchievementRuntimeSource source = 1;
+  // Full list of vehicles for this source and tick.
+  repeated AchievementVehicleState vehicles = 2;
+
+}
+
+// Stream snapshot event payload.
+message AchievementRuntimeSnapshot {
+  uint64 tick = 1;
+  // Milliseconds since Unix epoch (UTC).
+  uint64 server_time_ms = 2;
+  // Full list of active sources for current tick.
+  repeated AchievementSourceSnapshot sources = 3;
+
+}
+
+// Response envelope for aggregated achievement runtime stream.
+// Session event sequence:
+// 1) settings
+// 2) bootstrap
+// 3) topology_update and snapshot events
+message StreamAchievementRuntimeResponse {
+  oneof payload {
+    AchievementStreamSettings settings = 1;
+    AchievementRuntimeBootstrap bootstrap = 2;
+    AchievementRuntimeTopologyUpdate topology_update = 3;
+    AchievementRuntimeSnapshot snapshot = 4;
+  }
+
+}
+
+// Query API for achievement-oriented aggregated runtime stream.
+service AchievementStreamService {
+  // Streams achievement data for active official race and all active official sandboxes.
+  // For newly activated source, server sends topology_update with track_data
+  // before sending snapshot that references that source.
+  rpc StreamAchievementRuntime(StreamAchievementRuntimeRequest) returns (stream StreamAchievementRuntimeResponse);
+}

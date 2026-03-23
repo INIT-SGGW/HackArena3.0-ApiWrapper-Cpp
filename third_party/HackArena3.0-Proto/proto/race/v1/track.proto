@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package race.v1;
+
+import "race/v1/common.proto";
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+// Static centerline geometry for one lap.
+// Units are SI (meters, radians). World frame is right-handed with Y-up.
+message TrackData {
+  // Track identifier.
+  string map_id = 1;
+
+  // Full arc length of one lap along the main centerline.
+  // Must be > 0.
+  double lap_length_m = 2;
+  // Ordered centerline samples for one closed lap.
+  // Rules:
+  // - strictly increasing by s_m,
+  // - centerline_samples[0].s_m == 0,
+  // - for each sample: 0 <= s_m < lap_length_m,
+  // - closing segment wraps from last sample to first sample,
+  // - arc length wraps every lap: s == lap_length_m is equivalent to s == 0.
+  repeated CenterlineSample centerline_samples = 3;
+  // Pitstop centerline geometry split into enter/fix/exit sections.
+  PitstopData pitstop_data = 4;
+
+}
+
+// Pitstop centerline geometry split into enter/fix/exit sections.
+message PitstopData {
+  repeated CenterlineSample enter_centerline_samples = 1;
+  repeated CenterlineSample fix_centerline_samples = 2;
+  repeated CenterlineSample exit_centerline_samples = 3;
+  // Total arc length of full pitstop path (enter + fix + exit), in meters.
+  float length_m = 4;
+
+}
+
+// Ground surface classification for off-centerline lateral segments.
+enum GroundType {
+  GROUND_TYPE_ASPHALT = 0;
+  GROUND_TYPE_GRASS = 1;
+  GROUND_TYPE_GRAVEL = 2;
+  GROUND_TYPE_WALL = 3;
+  GROUND_TYPE_KERB = 4;
+}
+
+// Continuous lateral segment from centerline outward with one surface type.
+message GroundWidth {
+  // Segment width in meters.
+  // Must be >= 0.
+  float width_m = 1;
+  GroundType ground_type = 2;
+
+}
+
+// Centerline sample with local frame and derived geometry.
+message CenterlineSample {
+  // Distance along centerline in meters in [0, lap_length_m).
+  double s_m = 1;
+  // World-space centerline position in 3D track geometry.
+  Vector3 position = 2;
+  // Unit tangent vector. Points in track-forward direction (increasing s_m).
+  Vector3 tangent = 3;
+  // Unit surface normal at centerline (track local up), not global Y-up.
+  // Normal orientation is continuous around the full lap (no sign flips).
+  Vector3 normal = 4;
+  // Unit right vector (track-right direction).
+  // Must satisfy: right = normalize(cross(normal, tangent)).
+  // tangent/normal/right are mutually orthogonal.
+  Vector3 right = 5;
+  // Lateral drivable bound to track-left from centerline, measured along local right axis.
+  // Corridor points satisfy: position + right * d, where d in [-left_width_m, +right_width_m].
+  // Raw track geometry only (vehicle footprint and safety margin are not included).
+  // Must be >= 0.
+  float left_width_m = 6;
+  // Lateral drivable bound to track-right from centerline, measured along local right axis.
+  // Corridor points satisfy: position + right * d, where d in [-left_width_m, +right_width_m].
+  // Raw track geometry only (vehicle footprint and safety margin are not included).
+  // Must be >= 0.
+  float right_width_m = 7;
+  // Signed centerline curvature [1/m], approx d(heading_rad)/ds.
+  // Negative = left turn, positive = right turn (local track frame).
+  float curvature_1pm = 8;
+  // Longitudinal slope angle in radians (0 = flat, positive uphill).
+  // Positive means elevation increases in the +s direction.
+  float grade_rad = 9;
+  // Crossfall/banking angle in radians around tangent.
+  // Positive when the right side of the track is lower.
+  float bank_rad = 10;
+  // Maximum lateral bound to track-left from centerline, measured to outer barrier.
+  // Must be >= left_width_m.
+  float max_left_width_m = 11;
+  // Maximum lateral bound to track-right from centerline, measured to outer barrier.
+  // Must be >= right_width_m.
+  float max_right_width_m = 12;
+  // Left-side ground segments ordered from centerline outward.
+  // Sum(width_m) should be <= max_left_width_m.
+  repeated GroundWidth left_grounds = 13;
+  // Right-side ground segments ordered from centerline outward.
+  // Sum(width_m) should be <= max_right_width_m.
+  repeated GroundWidth right_grounds = 14;
+
+}
+
+// Request for static centerline geometry used by wrappers and bot clients.
+message GetTrackDataRequest {
+  // Track identifier.
+  string map_id = 1;
+
+}
+
+// Response with static centerline geometry.
+message GetTrackDataResponse {
+  TrackData track = 1;
+
+}
+
+// API for machine-readable track geometry used by wrappers and bot clients.
+service TrackService {
+  // Returns TrackData for the specified track.
+  rpc GetTrackData(GetTrackDataRequest) returns (GetTrackDataResponse);
+}

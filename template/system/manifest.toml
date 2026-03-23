@@ -1,0 +1,15 @@
+schema = 1
+
+[wrapper]
+language = "cpp"
+
+[runtime]
+engine = "native"
+version = "c++20"
+
+[run]
+entrypoint = ["bot"]
+source_dir = "template/user/src"
+
+[notes]
+summary = "Build the project with CMake, then run the generated bot executable."

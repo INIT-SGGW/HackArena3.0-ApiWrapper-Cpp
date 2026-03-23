@@ -1,0 +1,17 @@
+# build artifacts
+/gen/
+/dist/
+/out/
+/bin/
+/obj/
+/node_modules/
+
+# editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package achievement.v1;
+
+import "achievement/v1/achievement_types.proto";
+
+option csharp_namespace = "HA3.Proto.Achievement.V1";
+
+enum GrantAchievementReason {
+  GRANT_ACHIEVEMENT_REASON_UNSPECIFIED = 0;
+  GRANT_ACHIEVEMENT_REASON_NONE = 1;
+  GRANT_ACHIEVEMENT_REASON_NO_TEAM = 2;
+  GRANT_ACHIEVEMENT_REASON_NO_ACHIEVEMENT = 3;
+  GRANT_ACHIEVEMENT_REASON_ALREADY_GRANTED = 4;
+}
+
+enum RefuseAchievementReason {
+  REFUSE_ACHIEVEMENT_REASON_UNSPECIFIED = 0;
+  REFUSE_ACHIEVEMENT_REASON_NONE = 1;
+  REFUSE_ACHIEVEMENT_REASON_NO_TEAM = 2;
+  REFUSE_ACHIEVEMENT_REASON_NO_ACHIEVEMENT = 3;
+  REFUSE_ACHIEVEMENT_REASON_ALREADY_REFUSED = 4;
+}
+
+enum UpdateAchievementDisplayReason {
+  UPDATE_ACHIEVEMENT_DISPLAY_REASON_UNSPECIFIED = 0;
+  UPDATE_ACHIEVEMENT_DISPLAY_REASON_NONE = 1;
+  UPDATE_ACHIEVEMENT_DISPLAY_REASON_NO_ACHIEVEMENT = 2;
+}
+
+message GrantAchievementRequest {
+    string team_id = 1;
+    string achievement_id = 2;
+}
+
+message GrantAchievementResponse{
+    bool is_granted_successfully = 1;
+    GrantAchievementReason reason = 2;
+}
+
+message RefuseAchievementRequest {
+    string team_id = 1;
+    string achievement_id = 2;
+}
+
+message RefuseAchievementResponse{
+    bool is_refused_successfully = 1;
+    RefuseAchievementReason reason = 2;
+}
+
+message GetAchievementDisplaysRequest {
+}
+
+message GetAchievementDisplaysResponse {
+    repeated AchievementDisplay displays = 1;
+}
+
+message UpdateAchievementDisplayRequest{
+    string achievement_id = 1;
+    NewAchievementDisplay new_achievement_display = 2;
+}
+
+message UpdateAchievementDisplayResponse {
+    bool is_updated_successfully = 1;
+    UpdateAchievementDisplayReason reason = 2;
+}
+
+service AchievementServiceAdmin {
+    rpc GrantAchievement(GrantAchievementRequest) returns (GrantAchievementResponse);
+    rpc RefuseAchievement(RefuseAchievementRequest) returns (RefuseAchievementResponse);
+    rpc GetAchievementDisplays(GetAchievementDisplaysRequest) returns (GetAchievementDisplaysResponse);
+    rpc UpdateAchievementDisplay(UpdateAchievementDisplayRequest) returns (UpdateAchievementDisplayResponse);
+}

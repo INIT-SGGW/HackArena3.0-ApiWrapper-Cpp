@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package hackarena.issues.v1;
+
+option csharp_namespace = "HackArena.Issues.V1";
+
+// High-level issue category selected by a participant.
+enum IssueCategory {
+  // Default value.
+  ISSUE_CATEGORY_UNSPECIFIED = 0;
+  // Problem with a language wrapper.
+  ISSUE_CATEGORY_WRAPPER = 1;
+  // Problem with frontend UI.
+  ISSUE_CATEGORY_FRONTEND = 2;
+  // Problem with race simulation / driving behavior / physics.
+  ISSUE_CATEGORY_GAME_ENGINE = 3;
+  // Problem with HackArena CLI (including bot upload).
+  ISSUE_CATEGORY_HACKARENA_CLI = 4;
+  // Authentication or authorization problem.
+  ISSUE_CATEGORY_AUTH = 5;
+  // User cannot categorize the issue and asks for help.
+  ISSUE_CATEGORY_NEED_HELP = 6;
+}
+
+// Wrapper language for wrapper-related issues.
+enum WrapperLanguage {
+  // Default value.
+  WRAPPER_LANGUAGE_UNSPECIFIED = 0;
+  // Python wrapper.
+  WRAPPER_LANGUAGE_PYTHON = 1;
+  // C# wrapper.
+  WRAPPER_LANGUAGE_CSHARP = 2;
+  // C++ wrapper.
+  WRAPPER_LANGUAGE_CPP = 3;
+  // JavaScript wrapper.
+  WRAPPER_LANGUAGE_JS = 4;
+}
+
+// Additional context for wrapper-related issues.
+message WrapperContext {
+  // Required when WRAPPER category is selected.
+  WrapperLanguage language = 1;
+}
+
+// Submit issue request.
+message SubmitIssueRequest {
+  // Selected categories. Must contain at least one category.
+  repeated IssueCategory categories = 1;
+  // Issue description. Must be non-empty.
+  string description = 2;
+
+  // Category-specific details.
+  oneof details {
+    // Required when categories contains ISSUE_CATEGORY_WRAPPER.
+    WrapperContext wrapper = 3;
+  }
+}
+
+// Submit issue response.
+message SubmitIssueResponse {
+  // Created issue identifier.
+  int64 issue_id = 1;
+}
+
+// Issue submission operations.
+service IssuesService {
+  // Submit a new issue from the authenticated participant context.
+  //
+  // Validation semantics:
+  // - categories must have at least one value.
+  // - ISSUE_CATEGORY_NEED_HELP is exclusive and cannot be combined with others.
+  // - If categories contains ISSUE_CATEGORY_WRAPPER, wrapper.language is required.
+  // - If categories does not contain ISSUE_CATEGORY_WRAPPER, wrapper must be unset.
+  rpc SubmitIssue(SubmitIssueRequest) returns (SubmitIssueResponse);
+}

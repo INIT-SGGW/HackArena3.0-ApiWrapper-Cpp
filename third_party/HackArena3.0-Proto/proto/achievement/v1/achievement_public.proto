@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package achievement.v1;
+
+import "achievement/v1/achievement_types.proto";
+
+option csharp_namespace = "HA3.Proto.Achievement.V1";
+
+// Information about specific achievement.
+message AchievementRepresentation {
+	oneof representation {
+		// Representation of conditional achievement.
+		ConditionalAchievementRepresentation conditional = 1;
+		// Representation of numeric achievement.
+		NumericAchievementRepresentation numeric = 2;
+	}
+
+}
+
+// Request for achievement collection.
+message GetAchievementsRequest{
+	// Specific team id to query achievements for.
+	string team_id = 1;
+
+}
+
+// Response envelope for achievement collection.
+message GetAchievementsResponse{
+	// Number of secret achievements that are not achieved by this team.
+	int32 remaining_secret_achievements = 1;
+	// List of achievement representation.
+	// Contains secret achievements only when achieved by team.
+	repeated AchievementRepresentation achievements = 2;
+
+}
+
+// Request computation of team totals.
+message GetAchievementTotalsRequest{
+}
+
+// Response envelope for team totals collection.
+message GetAchievementTotalsResponse{
+	// Number of all achievements.
+	uint32 total_achievements = 1;
+	// Collection of computed totals for each team.
+	repeated TeamTotal totals = 2;
+
+}
+
+message StreamAchievementGrantsRequest{
+}
+
+message StreamAchievementGrantsResponse{
+	// Represents team that got achievement.
+	string team_id = 1;
+	// Represents got achievement name.
+	string achievement_name = 2;
+}
+
+// Api for achievement fetching.
+service AchievementService {
+	// Gets all achievements for specific team_id.
+	// Returns both achieved and not achieved achievements.
+	// Secret achievement are hidden until achieved.
+	rpc GetAchievements(GetAchievementsRequest) returns (GetAchievementsResponse);
+	// Get how many achievements each team has.
+	rpc GetAchievementTotals(GetAchievementTotalsRequest) returns (GetAchievementTotalsResponse);
+	// Global stream of achievement grant events.
+	rpc StreamAchievementGrants(StreamAchievementGrantsRequest) returns (stream StreamAchievementGrantsResponse);
+
+}

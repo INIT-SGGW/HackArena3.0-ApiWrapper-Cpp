@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package weather.v1;
+
+option csharp_namespace = "HA3.Proto.Weather.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Fixed weather states supported by backend and frontend.
+enum WeatherType {
+  WEATHER_TYPE_UNSPECIFIED = 0;
+  WEATHER_TYPE_CLEAR = 1;
+  WEATHER_TYPE_PARTLY_CLOUDY = 2;
+  WEATHER_TYPE_OVERCAST = 3;
+  WEATHER_TYPE_LIGHT_RAIN = 4;
+  WEATHER_TYPE_MEDIUM_RAIN = 5;
+  WEATHER_TYPE_HEAVY_RAIN = 6;
+}
+
+// Allowed forecast presets.
+enum ForecastPreset {
+  FORECAST_PRESET_UNSPECIFIED = 0;
+  FORECAST_PRESET_1_HOUR_STEP_15_MIN = 1;
+  FORECAST_PRESET_12_HOURS_STEP_1_HOUR = 2;
+}
+
+// Forecast point (estimation, not guaranteed real outcome).
+message ForecastPoint {
+  // Slot time (UTC)
+  google.protobuf.Timestamp time = 1;
+  WeatherType type = 2;
+  // Value range: 0.0..1.0
+  float rain_probability = 3;
+  // Air temperature in Celsius degrees.
+  int32 temperature_c = 4;
+
+}
+
+// Current weather snapshot.
+message WeatherNow {
+  WeatherType type = 1;
+  // Air temperature in Celsius degrees.
+  int32 temperature_c = 2;
+
+}
+
+// Forecast specification for explicit start time.
+message ForecastSpecAtTime {
+  // UTC start time used for simulation/projection.
+  google.protobuf.Timestamp start_time = 1;
+  ForecastPreset preset = 2;
+  // If true, backend may apply stochastic variation.
+  bool stochastic = 3;
+  // Optional deterministic seed for reproducible results.
+  optional uint64 seed = 4;
+
+}
+
+// Forecast specification "from now".
+message ForecastSpecNow {
+  // Preset defining forecast horizon and time step.
+  ForecastPreset preset = 1;
+
+}
+
+// Weather target for a specific active sandbox session.
+message WeatherSandboxTarget {
+  // Target active sandbox identifier.
+  string sandbox_id = 1;
+
+}
+
+// Weather target for active official race session.
+message WeatherOfficialRaceTarget {
+}
+
+// Explicit weather source target.
+// Exactly one target must be set.
+message WeatherTarget {
+  oneof target {
+    WeatherOfficialRaceTarget official_race = 1;
+    WeatherSandboxTarget sandbox = 2;
+  }
+
+}
+
+// Public forecast request. Backend computes forecast from current server time.
+message GetForecastNowRequest {
+  // Forecast parameters.
+  ForecastSpecNow spec = 1;
+
+}
+
+// Public forecast response.
+message GetForecastNowResponse {
+  repeated ForecastPoint points = 1;
+
+}
+
+// Public stream request for forecast updates.
+message StreamForecastUpdatesRequest {
+  // Forecast parameters.
+  ForecastSpecNow spec = 1;
+
+}
+
+// Forecast update event pushed by backend when effective forecast changes.
+message ForecastUpdateEvent {
+  repeated ForecastPoint points = 1;
+
+}
+
+// Public request for current weather state.
+message GetWeatherNowRequest {
+  // Required weather target.
+  // Request must include exactly one target; otherwise it is rejected.
+  WeatherTarget target = 1;
+}
+
+// Public response with current weather state.
+message GetWeatherNowResponse {
+  WeatherNow now = 1;
+
+}
+
+// Public stream request for current weather updates.
+message StreamWeatherUpdatesRequest {
+  // Required weather target.
+  // Request must include exactly one target; otherwise it is rejected.
+  WeatherTarget target = 1;
+}
+
+// Current weather update event pushed by backend when effective weather changes.
+message WeatherUpdateEvent {
+  WeatherNow now = 1;
+
+}
+
+// Global weather schedule entry used by admin API.
+message WeatherScheduleEntry {
+  // Start time of this segment (UTC). Segment lasts until next "from".
+  google.protobuf.Timestamp from = 1;
+  WeatherType type = 2;
+  // Air temperature in Celsius degrees for this schedule segment.
+  int32 temperature_c = 3;
+
+}
+
+// Admin request to read persisted global schedule.
+message GetWeatherScheduleRequest {
+}
+
+// Admin response with persisted global schedule.
+message GetWeatherScheduleResponse {
+  // Entries must be sorted by "from" ascending and contain no duplicate timestamps.
+  repeated WeatherScheduleEntry entries = 1;
+
+}
+
+// Full replacement of schedule data.
+message ReplaceWeatherScheduleRequest {
+  // Full replacement payload. Entries must be sorted by "from" ascending and contain no duplicate timestamps.
+  repeated WeatherScheduleEntry entries = 1;
+
+}
+
+// Empty admin response returned after successful schedule replacement.
+message ReplaceWeatherScheduleResponse {
+}
+
+// Simulate forecast for temporary schedule sent by frontend without persisting it.
+message SimulateForecastRequest {
+  // Temporary schedule. Must follow the same ordering and uniqueness rules as persisted entries.
+  repeated WeatherScheduleEntry draft_entries = 1;
+  // Simulation spec with explicit start time.
+  ForecastSpecAtTime spec = 2;
+
+}
+
+// Admin simulation response. No persisted data is modified.
+message SimulateForecastResponse {
+  repeated ForecastPoint points = 1;
+
+}
+
+// Public read API for frontend/bots/spectators.
+service WeatherQueryService {
+  // Returns current weather.
+  rpc GetWeatherNow(GetWeatherNowRequest) returns (GetWeatherNowResponse);
+
+  // Streams current weather updates whenever effective weather changes.
+  rpc StreamWeatherUpdates(StreamWeatherUpdatesRequest) returns (stream WeatherUpdateEvent);
+
+  // Returns forecast from current backend time.
+  rpc GetForecastNow(GetForecastNowRequest) returns (GetForecastNowResponse);
+
+  // Streams forecast updates whenever effective forecast changes.
+  rpc StreamForecastUpdates(StreamForecastUpdatesRequest) returns (stream ForecastUpdateEvent);
+}
+
+// Admin API for schedule management and what-if simulations.
+service WeatherAdminService {
+  // Admin only. Returns current persisted global schedule.
+  rpc GetWeatherSchedule(GetWeatherScheduleRequest) returns (GetWeatherScheduleResponse);
+
+  // Admin only. Replaces persisted global schedule with provided entries.
+  rpc ReplaceWeatherSchedule(ReplaceWeatherScheduleRequest) returns (ReplaceWeatherScheduleResponse);
+
+  // Admin only. Simulates forecast for temporary schedule.
+  rpc SimulateForecast(SimulateForecastRequest) returns (SimulateForecastResponse);
+}

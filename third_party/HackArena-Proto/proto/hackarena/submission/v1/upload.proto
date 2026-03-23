@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package hackarena.submission.v1;
+
+option csharp_namespace = "HackArena.Submission.V1";
+
+// Metadata sent as first upload frame.
+message UploadSourceMetadata {
+  // Original file name from CLI.
+  string file_name = 1;
+}
+
+// Streaming request for source upload.
+message UploadSourceRequest {
+  // First frame should contain metadata, then chunk frames.
+  oneof payload {
+    // Upload metadata frame.
+    UploadSourceMetadata metadata = 1;
+    // Binary chunk frame.
+    bytes chunk = 2;
+  }
+}
+
+// Upload result returned after stream completion.
+message UploadSourceResponse {
+  // Stable identifier for uploaded source archive.
+  string upload_id = 1;
+  // Uploaded size in bytes.
+  uint64 size_bytes = 2;
+  // SHA-256 digest of uploaded content.
+  string sha256 = 3;
+}

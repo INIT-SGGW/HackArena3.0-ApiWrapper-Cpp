@@ -1,0 +1,263 @@
+syntax = "proto3";
+
+package race.v1;
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+import "race/v1/common.proto";
+
+// High-level ghost mode phase used by clients for UX state rendering.
+enum GhostModePhase {
+  GHOST_MODE_PHASE_UNSPECIFIED = 0;
+  // Ghost mode is disabled for this vehicle and collisions are enabled.
+  GHOST_MODE_PHASE_INACTIVE = 1;
+  // Ghost mode is enabled for this vehicle and collisions are disabled.
+  GHOST_MODE_PHASE_ACTIVE = 2;
+  // Ghost mode is still active, but exit countdown is currently running.
+  GHOST_MODE_PHASE_PENDING_EXIT = 3;
+}
+
+// Active conditions that currently keep or can keep a vehicle in ghost mode.
+enum GhostModeBlocker {
+  GHOST_MODE_BLOCKER_UNSPECIFIED = 0;
+  // completed_laps is below GhostModeSettings.until_completed_laps.
+  GHOST_MODE_BLOCKER_LAPS_REQUIREMENT_NOT_MET = 1;
+  // Current speed is not above GhostModeSettings.exit_speed_min_mps.
+  GHOST_MODE_BLOCKER_EXIT_SPEED_NOT_MET = 2;
+  // Exit speed condition is met, but exit delay is still counting down.
+  GHOST_MODE_BLOCKER_EXIT_DELAY_RUNNING = 3;
+  // Vehicle overlap is currently present and prevents ghost mode exit.
+  // Evaluated per vehicle, not as a single global race flag.
+  GHOST_MODE_BLOCKER_VEHICLE_OVERLAP_ACTIVE = 4;
+  // Overlap is cleared for this vehicle, but no-overlap exit delay is still counting down.
+  // Evaluated per vehicle, not as a single global race flag.
+  GHOST_MODE_BLOCKER_OVERLAP_EXIT_DELAY_RUNNING = 5;
+  // Vehicle is currently in pit area.
+  GHOST_MODE_BLOCKER_IN_PIT = 6;
+}
+
+// Pitstop zones encoded as bit flags for pitstop_zone_flags.
+enum PitstopZoneFlag {
+  PITSTOP_ZONE_FLAG_UNSPECIFIED = 0;
+  // Bit 0 (1): vehicle overlaps pitstop enter zone.
+  PITSTOP_ZONE_FLAG_ENTER = 1;
+  // Bit 1 (2): vehicle overlaps pitstop fix zone.
+  PITSTOP_ZONE_FLAG_FIX = 2;
+  // Bit 2 (4): vehicle overlaps pitstop exit zone.
+  PITSTOP_ZONE_FLAG_EXIT = 4;
+}
+
+// Installed tire compound for a vehicle.
+enum TireType {
+  TIRE_TYPE_UNSPECIFIED = 0;
+  TIRE_TYPE_HARD = 1;
+  TIRE_TYPE_SOFT = 2;
+  TIRE_TYPE_WET = 3;
+}
+
+// Source of pit entry.
+enum PitEntrySource {
+  PIT_ENTRY_SOURCE_UNSPECIFIED = 0;
+  PIT_ENTRY_SOURCE_BOT_DECISION = 1;
+  PIT_ENTRY_SOURCE_REQUESTED = 2;
+  PIT_ENTRY_SOURCE_EMERGENCY = 3;
+}
+
+// Per-wheel tire wear values normalized to range [0.0, 1.0].
+message TireWearPerWheel {
+  float front_left = 1;
+  float front_right = 2;
+  float rear_left = 3;
+  float rear_right = 4;
+
+}
+
+// Per-wheel tire temperature in degrees Celsius.
+message TireTemperaturePerWheel {
+  float front_left_celsius = 1;
+  float front_right_celsius = 2;
+  float rear_left_celsius = 3;
+  float rear_right_celsius = 4;
+
+}
+
+// Per-wheel tire slip values.
+// Values are >= 0.0. Values > 1.0 indicate lost traction.
+message TireSlipPerWheel {
+  float front_left = 1;
+  float front_right = 2;
+  float rear_left = 3;
+  float rear_right = 4;
+
+}
+
+// Current pit runtime state for one vehicle.
+message PitRuntimeState {
+  // True when pit request is currently active.
+  bool pit_request_active = 1;
+  // Emergency lock timeout remaining in milliseconds.
+  // When > 0, the vehicle cannot move.
+  uint32 emergency_lock_remaining_ms = 2;
+  // Timestamp (ms, Unix epoch UTC) of the last completed pit.
+  uint64 last_pit_time_ms = 3;
+  // Source of the last completed pit.
+  PitEntrySource last_pit_source = 4;
+  // Lap index at which last completed pit occurred.
+  uint32 last_pit_lap = 5;
+
+}
+
+// One pit history entry.
+message PitHistoryEntry {
+  // Timestamp (ms, Unix epoch UTC) when pit occurred.
+  uint64 pit_time_ms = 1;
+  // Lap index at pit event.
+  uint32 lap = 2;
+  PitEntrySource source = 3;
+  // Tire compound selected/applied in this pit.
+  TireType new_tire_type = 4;
+
+}
+
+// Pit history for one vehicle.
+message PitHistoryState {
+  // Ordered from newest to oldest.
+  // Number of entries is backend-defined.
+  repeated PitHistoryEntry entries = 1;
+
+}
+
+// Runtime ghost mode state for a single vehicle.
+// Pairwise collision rule:
+// can_collide_pair(A,B) = A.can_collide_now && B.can_collide_now.
+message GhostModeState {
+  // Authoritative collision flag for this vehicle.
+  // Clients should use this as the only gameplay truth for collision checks.
+  bool can_collide_now = 1;
+  // Current high-level ghost mode phase for UX/debug.
+  // Do not infer collision enablement from phase; use can_collide_now.
+  // PENDING_EXIT remains non-collidable until transition to INACTIVE.
+  GhostModePhase phase = 2;
+  // Active blockers at current tick. May contain multiple values.
+  repeated GhostModeBlocker blockers = 3;
+  // Aggregated remaining time to ghost-mode exit in milliseconds.
+  // Should be > 0 only when phase is PENDING_EXIT.
+  uint32 exit_delay_remaining_ms = 4;
+
+}
+
+// Core pose data shared across views.
+message CarKinematics {
+  Vector3 position = 1;
+  Quaternion orientation = 2;
+
+}
+
+// Full car telemetry.
+message CarParticipantState {
+  uint64 last_applied_client_seq = 1;
+  float speed_mps = 2;
+  float engine_rpm = 3;
+  int32 gear = 4;
+  reserved 5, 6;
+  // Runtime ghost mode state for this vehicle.
+  GhostModeState ghost_mode = 7;
+  // Active pitstop zones encoded as PitstopZoneFlag bitmask.
+  // Bits:
+  // - ENTER = 1
+  // - FIX = 2
+  // - EXIT = 4
+  // Multiple flags may be set at the same time.
+  uint32 pitstop_zone_flags = 8;
+  // Number of wheels currently inside pitstop zones (range 0..4).
+  uint32 wheels_in_pitstop = 9;
+  // Installed tire compound.
+  TireType tire_type = 10;
+  // Tire wear per wheel, normalized to [0.0, 1.0].
+  TireWearPerWheel tire_wear = 11;
+  // Tire temperature per wheel in degrees Celsius.
+  TireTemperaturePerWheel tire_temperature_celsius = 12;
+  // Current pit runtime state (request/emergency lock/last pit summary).
+  PitRuntimeState pit_runtime = 13;
+  // Pit history entries for this vehicle.
+  PitHistoryState pit_history = 14;
+  // Planned tire compound for the next pit stop.
+  TireType next_pit_tire_type = 15;
+  // Per-wheel tire slip values. > 1.0 indicates lost traction.
+  TireSlipPerWheel tire_slip = 16;
+
+}
+
+// Minimal data needed for rendering visuals.
+message CarRenderState {
+  WheelSpeeds wheel_speeds = 1;
+  // Front-left wheel orientation in radians.
+  float front_left_wheel_orientation_rad = 2;
+  // Front-right wheel orientation in radians.
+  float front_right_wheel_orientation_rad = 3;
+
+}
+
+// Full state for frontend spectator mode.
+message FrontendCarFullState {
+  uint64 car_id = 1;
+  CarKinematics kinematics = 2;
+  CarParticipantState telemetry = 3;
+  CarRenderState render = 4;
+  // Current bot throttle input used for spectator UI.
+  float input_throttle = 5;
+  // Current bot brake input used for spectator UI.
+  float input_brake = 6;
+  // Current brake balancer value used for spectator UI.
+  float current_brake_balancer = 7;
+  // Current differential lock value used for spectator UI.
+  float current_differential_lock = 8;
+
+}
+
+// Optional debug-only telemetry for spectator snapshot.
+message FrontendSpectatorDebugInfo {
+  // Engine-reported race elapsed time in seconds from boink_get_race_duration().
+  // Uses engine Real precision (float); best-effort and non-authoritative for UI/gameplay logic.
+  float engine_race_elapsed_sec = 1;
+
+}
+
+// Spectator feed: full state for all cars.
+message FrontendSpectatorSnapshot {
+  uint64 tick = 1;
+  // Milliseconds since Unix epoch (UTC).
+  uint64 server_time_ms = 2;
+  repeated FrontendCarFullState cars = 3;
+  // Optional debug-only telemetry block.
+  FrontendSpectatorDebugInfo debug = 4;
+
+}
+
+// Participant view of own car (full driver detail).
+message ParticipantSelfState {
+  uint64 car_id = 1;
+  CarKinematics kinematics = 2;
+  CarParticipantState telemetry = 3;
+
+}
+
+// Participant view of opponent cars.
+message ParticipantOpponentState {
+  uint64 car_id = 1;
+  CarKinematics kinematics = 2;
+  // Runtime ghost mode state for this opponent vehicle.
+  GhostModeState ghost_mode = 3;
+
+}
+
+// Participant snapshot (self + opponents).
+message ParticipantSnapshot {
+  uint64 tick = 1;
+  // Milliseconds since Unix epoch (UTC).
+  uint64 server_time_ms = 2;
+
+  ParticipantSelfState self = 3;
+  repeated ParticipantOpponentState opponents = 4;
+
+}

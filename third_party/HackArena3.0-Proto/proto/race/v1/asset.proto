@@ -1,0 +1,160 @@
+syntax = "proto3";
+package race.v1;
+
+import "race/v1/common.proto";
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+// MIME types supported by map assets.
+enum MimeType {
+  MIME_TYPE_UNSPECIFIED = 0;
+  MIME_TYPE_GLTF_BINARY = 1;
+  MIME_TYPE_IMAGE_SVG_XML = 2;
+}
+
+// Known map asset slots exposed by backend.
+enum MapAssetKind {
+  MAP_ASSET_KIND_UNSPECIFIED = 0;
+  MAP_ASSET_KIND_MAIN_GLB = 1;
+  MAP_ASSET_KIND_ANIMATION_GLB = 2;
+  MAP_ASSET_KIND_MINIMAP_SVG = 3;
+}
+
+// Metadata descriptor for a single map asset file.
+message MapAssetMeta {
+  // Asset slot kind.
+  MapAssetKind kind = 1;
+  // Asset MIME type.
+  MimeType content_type = 2;
+  // Raw asset byte size.
+  uint64 size_bytes = 3;
+  // Content hash used for cache validation.
+  bytes content_hash = 4;
+
+}
+
+// Typed minimap projection metadata used by frontend overlays.
+message MinimapMetadata {
+  // SVG viewBox: min_x, min_y, width, height.
+  double view_box_min_x = 1;
+  double view_box_min_y = 2;
+  double view_box_width = 3;
+  double view_box_height = 4;
+  // World-space origin used for 2D projection (XZ plane).
+  double origin_world_x = 5;
+  double origin_world_z = 6;
+  // Rotation from world XZ coordinates into minimap space, in radians.
+  // Positive values rotate counter-clockwise in minimap coordinates.
+  double rotation_rad = 7;
+  // Scale in SVG units per world meter.
+  double scale_svg_units_per_meter = 8;
+
+}
+
+// Typed helicopter-view orbit metadata used by frontend overlays.
+message HelicopterViewMetadata {
+  // Ellipse center in world coordinates (XZ plane is used for orbit).
+  Vector3 ellipse_center_world = 1;
+  // Ellipse semi-axis length along local X in meters.
+  float ellipse_semi_axis_x_m = 2;
+  // Ellipse semi-axis length along local Z in meters.
+  float ellipse_semi_axis_z_m = 3;
+  // Ellipse rotation around Y axis in radians.
+  float ellipse_rotation_rad = 4;
+  // Desired lead/lag arc offset in meters when car movement is toward helicopter.
+  float desired_arc_offset_towards_m = 5;
+  // Desired lead/lag arc offset in meters when car movement is away from helicopter.
+  float desired_arc_offset_away_m = 6;
+
+}
+
+// Typed map metadata used by UI and lobby views.
+message MapMetadata {
+  // Track identifier.
+  string map_id = 1;
+  // Human-readable map name.
+  string map_name = 2;
+  // Full track length in meters.
+  float total_length_m = 3;
+  // World-space anchor positions used by follow-camera mode.
+  repeated Vector3 follow_camera_anchor_positions = 4;
+  // Helicopter-view orbit configuration.
+  HelicopterViewMetadata helicopter_view = 5;
+
+}
+
+// Full map asset bundle metadata for frontend bootstrap.
+// Required: main_glb, minimap_svg, minimap_metadata, map_metadata.
+// Optional: animation_glb.
+message MapAssetBundleMeta {
+  string map_id = 1;
+  MapAssetMeta main_glb = 2;
+  MapAssetMeta animation_glb = 3;
+  MapAssetMeta minimap_svg = 4;
+  MinimapMetadata minimap_metadata = 5;
+  MapMetadata map_metadata = 6;
+
+}
+
+// Catalog entry shown in admin/frontend map pickers.
+message MapCatalogEntry {
+  string map_id = 1;
+  string display_name = 2;
+
+}
+
+// Request for available maps in catalog.
+message ListMapsRequest {
+}
+
+// Response with maps available for race configuration.
+message ListMapsResponse {
+  repeated MapCatalogEntry maps = 1;
+
+}
+
+// Request for map asset bundle metadata.
+message GetMapAssetBundleMetaRequest {
+  string map_id = 1;
+
+}
+
+// Response with full map asset bundle metadata.
+message GetMapAssetBundleMetaResponse {
+  MapAssetBundleMeta bundle = 1;
+
+}
+
+// Request for chunked map asset download.
+message GetMapAssetRequest {
+  // Target map identifier.
+  string map_id = 1;
+  // Requested asset slot within the map bundle.
+  MapAssetKind kind = 2;
+  // Byte offset from start of file.
+  uint64 offset = 3;
+  // Maximum number of bytes to stream in this request.
+  uint64 limit = 4;
+  // Optional optimistic-concurrency hash.
+  // When set and mismatched, server should reject the request.
+  bytes if_match_hash = 5;
+
+}
+
+// Chunked map asset download response.
+message GetMapAssetResponse {
+  uint64 offset = 1;
+  bytes data = 2;
+  bool eof = 3;
+
+}
+
+// Query API for map asset discovery and chunked asset download.
+service AssetService {
+  // Lists maps available for selection in UI/configuration.
+  rpc ListMaps(ListMapsRequest) returns (ListMapsResponse);
+  // Returns typed bundle metadata and file descriptors for a selected map.
+  rpc GetMapAssetBundleMeta(GetMapAssetBundleMetaRequest) returns (GetMapAssetBundleMetaResponse);
+  // Streams raw bytes of a selected map asset in chunks.
+  rpc GetMapAsset(GetMapAssetRequest) returns (stream GetMapAssetResponse);
+}

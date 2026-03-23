@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package hackarena.platform.users.v1;
+
+import "hackarena/platform/common/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "HackArena.Platform.Users.V1";
+
+// Normalized platform user.
+message User {
+  // User identifier.
+  hackarena.platform.common.v1.Uuid id = 1;
+  // Primary email, if available.
+  string email = 2;
+  // Display name.
+  string display_name = 3;
+  // Platform roles.
+  repeated string roles = 4;
+  // Locale, if available.
+  string locale = 5;
+  // Issuer identifier.
+  string issuer = 20;
+  // Username-like identifier.
+  string preferred_username = 21;
+
+  reserved 6 to 19;
+  reserved 22 to 49;
+}
+
+// Empty request; identity inferred from auth context.
+message GetMeRequest {}
+
+// GetMe response.
+message GetMeResponse {
+  // Current user.
+  User me = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+// User read operations.
+service UsersService {
+  // Get the authenticated user.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+}

@@ -1,0 +1,384 @@
+syntax = "proto3";
+
+package race.v1;
+
+option csharp_namespace = "HA3.Proto.Race.V1";
+
+import "race/v1/telemetry.proto";
+
+// Reason why the requested stream rate was adjusted by the server.
+enum StreamClampReason {
+  STREAM_CLAMP_REASON_UNSPECIFIED = 0;
+
+  // Requested rate is accepted as-is (no clamping applied).
+  STREAM_CLAMP_REASON_NONE = 1;
+
+  // Clamped due to server-wide maximum stream rate limits.
+  STREAM_CLAMP_REASON_SERVER_LIMIT = 2;
+}
+
+enum SpectatorView {
+  SPECTATOR_VIEW_UNSPECIFIED = 0;
+  SPECTATOR_VIEW_PUBLIC = 1;
+  SPECTATOR_VIEW_TEAM = 2;
+  SPECTATOR_VIEW_ALL = 3;
+}
+
+enum ViewDowngradeReason {
+  VIEW_DOWNGRADE_REASON_UNSPECIFIED = 0;
+  VIEW_DOWNGRADE_REASON_NONE = 1;
+  VIEW_DOWNGRADE_REASON_NOT_AUTHORIZED = 2;
+}
+
+// Requested gear-shift operation for a single controls command.
+enum GearShift {
+  // Treat as no shift requested.
+  GEAR_SHIFT_UNSPECIFIED = 0;
+  // Do not request a gear shift.
+  GEAR_SHIFT_NONE = 1;
+  // Request shift by +1 gear.
+  GEAR_SHIFT_UPSHIFT = 2;
+  // Request shift by -1 gear.
+  GEAR_SHIFT_DOWNSHIFT = 3;
+}
+
+// Participant wrapper implementation used by the connected client SDK/runtime.
+enum ParticipantWrapperType {
+  PARTICIPANT_WRAPPER_TYPE_UNSPECIFIED = 0;
+  PARTICIPANT_WRAPPER_TYPE_PYTHON = 1;
+  PARTICIPANT_WRAPPER_TYPE_CSHARP = 2;
+  PARTICIPANT_WRAPPER_TYPE_JAVA = 3;
+  PARTICIPANT_WRAPPER_TYPE_CPP = 4;
+  PARTICIPANT_WRAPPER_TYPE_JS_TS = 5;
+  PARTICIPANT_WRAPPER_TYPE_RUST = 6;
+  PARTICIPANT_WRAPPER_TYPE_GO = 7;
+  PARTICIPANT_WRAPPER_TYPE_OTHER = 8;
+}
+
+// Request for joining an active local sandbox session.
+message LocalSandboxJoinRequest {
+  // Target active local sandbox identifier to join.
+  string sandbox_id = 1;
+
+}
+
+// Join response with assigned participant vehicle data.
+message LocalSandboxJoinResponse {
+  // Assigned participant vehicle identifier.
+  uint64 car_id = 1;
+  // Map identifier of the joined sandbox session.
+  string map_id = 2;
+
+}
+
+// Development-only quick join request for entering an active sandbox session.
+message QuickJoinDevRequest {
+  // Target active sandbox identifier to join.
+  string sandbox_id = 1;
+
+}
+
+// Development-only quick join response with assigned participant vehicle data.
+message QuickJoinDevResponse {
+  // Assigned participant vehicle identifier.
+  uint64 car_id = 1;
+  // Map identifier of the joined sandbox session.
+  string map_id = 2;
+
+}
+
+message SetControlsResponse {
+  uint64 client_seq = 1;
+
+  uint64 applies_from_tick = 2;
+  // Shift operation that was actually executed by drivetrain logic.
+  // Returns NONE when no shift was executed.
+  GearShift accepted_shift = 3;
+
+}
+
+message SetControlsDevRequest {
+  uint64 client_seq = 1;
+
+  // Normalized throttle input in range [0.0, 1.0].
+  float throttle = 2;
+
+  // Normalized brake input in range [0.0, 1.0].
+  float brake = 3;
+  
+  // Normalized steering input in range [-1.0, 1.0], where -1 is full left and +1 is full right.
+  float steering = 4;
+
+  uint64 target_car_id = 5;
+  // Requested gear shift by one step.
+  // UNSPECIFIED is treated as NONE.
+  GearShift gear_shift = 6;
+
+}
+
+// First client message on participant stream.
+message ParticipantStreamInit {
+  // Participant wrapper implementation.
+  ParticipantWrapperType wrapper_type = 1;
+  // Wrapper version reported by the participant runtime.
+  string wrapper_version = 2;
+}
+
+// Controls command sent by participant over bidi stream.
+message ParticipantControlsInput {
+  // Client-side command sequence for ack correlation.
+  uint64 client_seq = 1;
+  // Normalized throttle input in range [0.0, 1.0].
+  float throttle = 2;
+  // Normalized brake input in range [0.0, 1.0].
+  float brake = 3;
+  // Normalized steering input in range [-1.0, 1.0], where -1 is full left and +1 is full right.
+  float steering = 4;
+  // Requested gear shift by one step.
+  // UNSPECIFIED is treated as NONE.
+  GearShift gear_shift = 5;
+  // Brake balance control in range [0.0, 1.0].
+  float brake_balancer = 6;
+  // Differential lock control in range [0.0, 1.0].
+  float differential_lock = 7;
+}
+
+// One-shot command requesting teleport/resume back to track.
+message ParticipantBackToTrackCommand {
+  // Client-side command sequence for ack correlation.
+  uint64 client_seq = 1;
+}
+
+// One-shot command requesting emergency teleport to pitstop area.
+message ParticipantEmergencyPitstopCommand {
+  // Client-side command sequence for ack correlation.
+  uint64 client_seq = 1;
+}
+
+// One-shot command setting tire compound for the next pit stop.
+message ParticipantSetNextPitTireTypeCommand {
+  // Client-side command sequence for ack correlation.
+  uint64 client_seq = 1;
+  TireType next_tire_type = 2;
+}
+
+// Envelope for participant->server stream payloads.
+// Protocol rules:
+// - First message on stream must be init.
+// - init may be sent only once.
+message ParticipantClientMessage {
+  oneof payload {
+    ParticipantStreamInit init = 1;
+    ParticipantControlsInput controls = 2;
+    ParticipantBackToTrackCommand back_to_track = 3;
+    ParticipantEmergencyPitstopCommand emergency_pitstop = 4;
+    ParticipantSetNextPitTireTypeCommand set_next_pit_tire_type = 5;
+  }
+}
+
+// Server acknowledgement for a controls command.
+message ParticipantControlsAck {
+  // Echoed client sequence from controls input.
+  uint64 client_seq = 1;
+  // Tick from which accepted controls are applied.
+  uint64 applies_from_tick = 2;
+  // Shift operation that was actually executed by drivetrain logic.
+  // Returns NONE when no shift was executed.
+  GearShift accepted_shift = 3;
+}
+
+// Participant command kind used by command acknowledgements.
+enum ParticipantCommandType {
+  PARTICIPANT_COMMAND_TYPE_UNSPECIFIED = 0;
+  PARTICIPANT_COMMAND_TYPE_BACK_TO_TRACK = 1;
+  PARTICIPANT_COMMAND_TYPE_EMERGENCY_PITSTOP = 2;
+  PARTICIPANT_COMMAND_TYPE_SET_NEXT_PIT_TIRE_TYPE = 3;
+}
+
+// Result status for participant command processing.
+enum ParticipantCommandStatus {
+  PARTICIPANT_COMMAND_STATUS_UNSPECIFIED = 0;
+  PARTICIPANT_COMMAND_STATUS_ACCEPTED = 1;
+  PARTICIPANT_COMMAND_STATUS_REJECTED = 2;
+}
+
+// Reject reason for participant one-shot commands.
+enum ParticipantCommandRejectReason {
+  PARTICIPANT_COMMAND_REJECT_REASON_UNSPECIFIED = 0;
+  PARTICIPANT_COMMAND_REJECT_REASON_NOT_ALLOWED = 1;
+  PARTICIPANT_COMMAND_REJECT_REASON_RATE_LIMITED = 2;
+  PARTICIPANT_COMMAND_REJECT_REASON_IN_PIT = 3;
+}
+
+// Server acknowledgement for one-shot participant commands.
+message ParticipantCommandAck {
+  // Echoed client sequence from command input.
+  uint64 client_seq = 1;
+  ParticipantCommandType command_type = 2;
+  ParticipantCommandStatus status = 3;
+  // Tick from which accepted command effects are applied.
+  uint64 applies_from_tick = 4;
+  // Must be set only when status is REJECTED.
+  // For emergency_pitstop command, IN_PIT may be returned when vehicle is already in pit.
+  ParticipantCommandRejectReason rejected_reason = 5;
+}
+
+// Global car dimensions for the current participant session.
+message CarDimensions {
+  float width_m = 1;
+  float depth_m = 2;
+}
+
+// One-time participant stream bootstrap payload.
+message ParticipantBootstrap {
+  CarDimensions car_dimensions = 1;
+}
+
+// Envelope for server->participant stream events.
+// After successful init, server sends settings, then one-time bootstrap,
+// then emits ack/snapshot/command_ack asynchronously.
+message ParticipantServerEvent {
+  // Monotonic per-stream server sequence number.
+  uint64 server_seq = 1;
+
+  oneof payload {
+    StreamSettings settings = 2;
+    ParticipantControlsAck ack = 3;
+    ParticipantSnapshot snapshot = 4;
+    ParticipantCommandAck command_ack = 5;
+    ParticipantBootstrap bootstrap = 6;
+  }
+}
+
+message StreamSettings {
+  uint32 requested_hz = 1;
+  uint32 effective_hz = 2;
+  StreamClampReason clamp_reason = 3;
+
+  SpectatorView resolved_view = 4;
+  ViewDowngradeReason view_downgrade_reason = 5;
+
+  string map_id = 6;
+
+}
+
+// Spectator target for streaming a specific active sandbox.
+message SpectatorSandboxTarget {
+  // Target active sandbox identifier.
+  string sandbox_id = 1;
+
+}
+
+// Spectator target for streaming the active official race.
+message SpectatorOfficialRaceTarget {
+}
+
+// Request for frontend spectator stream configuration.
+message GetFrontendSpectatorRequest {
+  // Requested stream frequency for spectator updates.
+  uint32 requested_hz = 1;
+  // Requested spectator data scope.
+  SpectatorView requested_view = 2;
+  // Explicit spectator stream target.
+  // Exactly one target should be set by client.
+  oneof target {
+    // Stream the selected active sandbox.
+    SpectatorSandboxTarget sandbox = 3;
+    // Stream the active official race.
+    SpectatorOfficialRaceTarget official_race = 4;
+  }
+  // Requests optional debug telemetry in spectator snapshots.
+  // Server may ignore this flag when caller is not authorized.
+  bool include_debug = 5;
+
+}
+
+message FrontendSpectatorEvent {
+  oneof payload {
+    StreamSettings settings = 1;
+    FrontendSpectatorSnapshot snapshot = 2;
+  }
+
+}
+
+// Frontend command request: force controlled bot back to track.
+// Target bot/runtime is derived by server from authenticated context.
+message BackToTrackRequest {
+}
+
+// Frontend response for BackToTrack.
+message BackToTrackResponse {
+  ParticipantCommandStatus status = 1;
+  // Tick from which accepted command effects are applied.
+  uint64 applies_from_tick = 2;
+  // Must be set only when status is REJECTED.
+  ParticipantCommandRejectReason rejected_reason = 3;
+}
+
+// Frontend command request: ask controlled bot to (or not to) go to pitstop by itself.
+// Target bot/runtime is derived by server from authenticated context.
+message RequestPitstopRequest {
+  // true: request self-driven pit entry, false: clear previous request.
+  bool request_pitstop = 1;
+}
+
+// Frontend response for RequestPitstop.
+message RequestPitstopResponse {
+  ParticipantCommandStatus status = 1;
+  // Tick from which accepted command effects are applied.
+  uint64 applies_from_tick = 2;
+  // Must be set only when status is REJECTED.
+  ParticipantCommandRejectReason rejected_reason = 3;
+}
+
+// Frontend command request: force controlled bot teleport to pitstop.
+// Target bot/runtime is derived by server from authenticated context.
+message EmergencyPitstopRequest {
+}
+
+// Frontend response for EmergencyPitstop.
+message EmergencyPitstopResponse {
+  ParticipantCommandStatus status = 1;
+  // Tick from which accepted command effects are applied.
+  uint64 applies_from_tick = 2;
+  // Must be set only when status is REJECTED.
+  ParticipantCommandRejectReason rejected_reason = 3;
+}
+
+// Frontend command request: set tire compound for the next pit stop.
+// Target bot/runtime is derived by server from authenticated context.
+message SetNextPitTireTypeRequest {
+  TireType next_tire_type = 1;
+}
+
+// Frontend response for SetNextPitTireType.
+message SetNextPitTireTypeResponse {
+  ParticipantCommandStatus status = 1;
+  // Tick from which accepted command effects are applied.
+  uint64 applies_from_tick = 2;
+  // Must be set only when status is REJECTED.
+  ParticipantCommandRejectReason rejected_reason = 3;
+}
+
+// Participant gameplay stream:
+// init -> settings -> async ack/snapshot events.
+service RaceParticipantService {
+  rpc Stream(stream ParticipantClientMessage) returns (stream ParticipantServerEvent);
+  // Joins an active local sandbox.
+  rpc LocalSandboxJoin(LocalSandboxJoinRequest) returns (LocalSandboxJoinResponse);
+}
+
+service RaceService {
+  // Development-only helper for quickly joining an active sandbox by sandbox_id.
+  rpc QuickJoinDev(QuickJoinDevRequest) returns (QuickJoinDevResponse);
+  rpc SetControlsDev(SetControlsDevRequest) returns (SetControlsResponse);
+  // Force controlled bot back to track.
+  rpc BackToTrack(BackToTrackRequest) returns (BackToTrackResponse);
+  // Ask controlled bot to go to pitstop (or clear the request).
+  rpc RequestPitstop(RequestPitstopRequest) returns (RequestPitstopResponse);
+  // Force controlled bot teleport to pitstop.
+  rpc EmergencyPitstop(EmergencyPitstopRequest) returns (EmergencyPitstopResponse);
+  // Set tire compound used by controlled bot on the next pit stop.
+  rpc SetNextPitTireType(SetNextPitTireTypeRequest) returns (SetNextPitTireTypeResponse);
+  rpc StreamFrontendSpectator(GetFrontendSpectatorRequest) returns (stream FrontendSpectatorEvent);
+}
