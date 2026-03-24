@@ -1,0 +1,140 @@
+name: Release SDK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-sdk:
+    name: Build SDK (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-amd64
+            runner: windows-latest
+            triplet: x64-windows
+            generator: Visual Studio 17 2022
+            config: Release
+            artifact_glob: build/hackarena3-cpp-sdk-*.zip
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            triplet: x64-linux
+            generator: Ninja
+            config: Release
+            artifact_glob: build/hackarena3-cpp-sdk-*.zip
+          - name: macos-x86_64
+            runner: macos-13
+            triplet: x64-osx
+            generator: Ninja
+            config: Release
+            artifact_glob: build/hackarena3-cpp-sdk-*.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/downloads
+            ${{ github.workspace }}/vcpkg/installed
+          key: ${{ runner.os }}-${{ matrix.triplet }}-vcpkg-${{ hashFiles('CMakeLists.txt', '.gitmodules') }}
+
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path vcpkg)) {
+            git clone https://github.com/microsoft/vcpkg.git vcpkg
+          }
+          & "${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Bootstrap vcpkg (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git vcpkg
+          fi
+          ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\vcpkg\vcpkg.exe" install "grpc:${{ matrix.triplet }}" "protobuf:${{ matrix.triplet }}" "nlohmann-json:${{ matrix.triplet }}"
+
+      - name: Install dependencies (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          ./vcpkg/vcpkg install "grpc:${{ matrix.triplet }}" "protobuf:${{ matrix.triplet }}" "nlohmann-json:${{ matrix.triplet }}"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >
+          cmake -S . -B build
+          -G "${{ matrix.generator }}"
+          -A x64
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+
+      - name: Configure (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: >
+          cmake -S . -B build
+          -G "${{ matrix.generator }}"
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+
+      - name: Build SDK archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake --build build --target hackarena3_sdk_zip --config ${{ matrix.config }} --parallel
+
+      - name: Build SDK archive (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: cmake --build build --target hackarena3_sdk_zip --parallel
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-sdk
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release Assets
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-sdk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-sdk"
+          merge-multiple: true
+          path: release-assets
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG_NAME" >/dev/null 2>&1 || gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes
+          gh release upload "$TAG_NAME" release-assets/* --clobber

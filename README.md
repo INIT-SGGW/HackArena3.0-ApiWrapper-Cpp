@@ -124,25 +124,25 @@ Create a local install tree:
 cmake --install build --config Release --prefix .\install
 ```
 
-Create the SDK release package with CPack:
+Create the SDK release package with the explicit SDK target:
 
 Windows:
 
 ```powershell
-cpack --config build\CPackConfig.cmake -C Release -G ZIP
+cmake --build build --target hackarena3_sdk_zip --config Release
 ```
 
 Linux/macOS:
 
 ```bash
-cpack --config build/CPackConfig.cmake -C Release
+cmake --build build --target hackarena3_sdk_zip
 ```
 
 This produces a package named like:
 
 - Windows: `hackarena3-cpp-sdk-0.1.0b4-Windows-AMD64.zip`
-- Linux: `hackarena3-cpp-sdk-0.1.0b4-Linux-x86_64.tar.gz`
-- macOS: `hackarena3-cpp-sdk-0.1.0b4-Darwin-arm64.tar.gz`
+- Linux: `hackarena3-cpp-sdk-0.1.0b4-Linux-x86_64.zip`
+- macOS: `hackarena3-cpp-sdk-0.1.0b4-Darwin-x86_64.zip`
 
 Create the template zip asset:
 
@@ -156,8 +156,27 @@ The output is written to:
 
 Recommended GitHub Release layout:
 
-- one SDK package asset produced by `cpack`
-- one template asset produced by `hackarena3_template_zip`
+- one SDK package asset produced by `hackarena3_sdk_zip`
+- optionally one template asset produced by `hackarena3_template_zip`
+
+## GitHub Actions Release Build
+
+The repository includes a cross-platform GitHub Actions workflow at `.github/workflows/release-sdk.yml`.
+
+It builds only the SDK package target:
+
+- `hackarena3_sdk_zip`
+
+Target platforms:
+
+- Windows: `windows-latest` with MSVC and `x64-windows`
+- Linux: `ubuntu-latest` with `x64-linux`
+- macOS: `macos-13` with `x64-osx`
+
+Trigger behavior:
+
+- `workflow_dispatch`: builds the SDK archives and uploads them as workflow artifacts
+- tag push matching `v*`: builds the SDK archives and uploads them to the GitHub Release for that tag
 
 Consumer workflow from release assets only:
 
