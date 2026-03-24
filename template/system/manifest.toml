@@ -2,6 +2,7 @@ schema = 1
 
 [wrapper]
 language = "cpp"
+template_version = "0.1.0b4"
 
 [runtime]
 engine = "native"
@@ -9,7 +10,18 @@ version = "c++20"
 
 [run]
 entrypoint = ["bot"]
-source_dir = "template/user/src"
+source_dir = "user/src"
+
+[submit]
+include = [
+  "CMakeLists.txt",
+  "user/src"
+]
+exclude = [
+  "build/**",
+  "cmake-build-*/**",
+  "out/**"
+]
 
 [notes]
 summary = "Build the project with CMake, then run the generated bot executable."

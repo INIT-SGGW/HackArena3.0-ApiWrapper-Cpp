@@ -13,8 +13,8 @@ Release model:
 - `src/`: wrapper implementation for config, auth, game-token issuance, sandbox discovery, race APIs, proto-to-domain conversion, and participant runtime loop.
 - `template/user/src/bot/main.cpp`: example/template bot executable source.
 - `template/system/manifest.toml`: C++ equivalent manifest describing the bot entry concept.
-- `third_party/HackArena3.0-Proto/proto/`: HA3 proto source of truth used for generated C++ bindings.
-- `third_party/HackArena-Proto/proto/`: broker/connect proto source of truth used for generated C++ bindings.
+- `third_party/HackArena3.0-Proto/`: Git submodule pointing at `https://github.com/INIT-SGGW/HackArena3.0-Proto.git`.
+- `third_party/HackArena-Proto/`: Git submodule pointing at `https://github.com/INIT-SGGW/HackArena-Proto.git`.
 - `cmake/GenerateGrpcSources.cmake`: reproducible protobuf/gRPC code generation wiring.
 
 ## Prerequisites
@@ -28,6 +28,8 @@ For building the wrapper from source:
 
 - primary dependency path: `vcpkg`
 - required packages: `grpc`, `protobuf`, `nlohmann-json`
+- initialize Git submodules:
+  - `git submodule update --init --recursive`
 - expected tooling:
   - Windows: Visual Studio 2022 or newer with MSVC and CMake
   - Linux: GCC 12+ or Clang 15+ with CMake
