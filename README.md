@@ -7,6 +7,16 @@ Release model:
 - the reusable wrapper/library is released as a self-contained C++ SDK package built from the install tree, analogous to publishing the Python package from `/srv/hackarena3/`
 - the contents of `template/` are released separately as a zip asset, analogous to the Python template release asset
 
+## Clone and Setup
+
+If you are building the wrapper from source, clone the repository and initialize submodules:
+
+```bash
+git clone https://github.com/INIT-SGGW/HackArena3.0-ApiWrapper-Cpp.git
+cd HackArena3.0-ApiWrapper-Cpp
+git submodule update --init --recursive
+```
+
 ## Project Structure
 
 - `include/hackarena3/`: public wrapper API, domain types, config loading, and `run_bot(...)`.
