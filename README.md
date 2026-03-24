@@ -171,12 +171,21 @@ Target platforms:
 
 - Windows: `windows-latest` with MSVC and `x64-windows`
 - Linux: `ubuntu-latest` with `x64-linux`
-- macOS: `macos-13` with `x64-osx`
+- macOS: `macos-15-intel` with `x64-osx`
 
 Trigger behavior:
 
 - `workflow_dispatch`: builds the SDK archives and uploads them as workflow artifacts
 - tag push matching `v*`: builds the SDK archives and uploads them to the GitHub Release for that tag
+
+Workflow requirement for private proto submodules:
+
+- if `third_party/HackArena3.0-Proto` and `third_party/HackArena-Proto` are private, add a repository or organization secret named `SUBMODULES_TOKEN`
+- `SUBMODULES_TOKEN` must have read access to:
+  - `INIT-SGGW/HackArena3.0-ApiWrapper-Cpp`
+  - `INIT-SGGW/HackArena3.0-Proto`
+  - `INIT-SGGW/HackArena-Proto`
+- if the proto repositories are public, the workflow falls back to `github.token`
 
 Consumer workflow from release assets only:
 

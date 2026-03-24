@@ -3,8 +3,11 @@ name: Release SDK
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "v*"
+      tags:
+        - "v*"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -30,7 +33,7 @@ jobs:
             config: Release
             artifact_glob: build/hackarena3-cpp-sdk-*.zip
           - name: macos-x86_64
-            runner: macos-13
+            runner: macos-15-intel
             triplet: x64-osx
             generator: Ninja
             config: Release
@@ -40,6 +43,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.SUBMODULES_TOKEN != '' && secrets.SUBMODULES_TOKEN || github.token }}
           submodules: recursive
 
       - name: Restore vcpkg cache
