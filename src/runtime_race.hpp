@@ -24,10 +24,26 @@ struct RaceApi {
 };
 
 RaceApi create_backend_api(const BackendTarget& backend);
+RaceApi create_official_backend_api(const std::string& grpc_target);
 std::vector<std::pair<std::string, std::string>> race_metadata(GameTokenProvider& token_provider);
+std::vector<std::pair<std::string, std::string>> race_metadata_official(
+    const std::string& team_token,
+    const std::string& auth_token
+);
+race::v1::PrepareOfficialJoinResponse prepare_official_join(
+    RaceApi& api,
+    const std::string& rpc_prefix,
+    const std::vector<std::pair<std::string, std::string>>& metadata
+);
 race::v1::TrackData fetch_track_data(
     RaceApi& api,
     GameTokenProvider& token_provider,
+    const std::string& map_id
+);
+race::v1::TrackData fetch_track_data_official(
+    RaceApi& api,
+    const std::string& rpc_prefix,
+    const std::vector<std::pair<std::string, std::string>>& metadata,
     const std::string& map_id
 );
 

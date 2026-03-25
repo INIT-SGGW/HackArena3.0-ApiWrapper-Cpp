@@ -16,6 +16,8 @@
 #include <vector>
 
 #include <grpcpp/client_context.h>
+#include <grpcpp/impl/rpc_method.h>
+#include <grpcpp/support/sync_stream.h>
 
 #include "detail/constants.hpp"
 #include "detail/grpc_utils.hpp"
@@ -230,7 +232,8 @@ race::v1::ParticipantClientMessage stream_init_message() {
 void reader_loop(
     grpc::ClientReaderWriterInterface<race::v1::ParticipantClientMessage, race::v1::ParticipantServerEvent>* stream,
     SessionState& state,
-    hackarena3::BotContext& ctx
+    hackarena3::BotContext& ctx,
+    const std::optional<std::string>& expected_map_id
 ) {
     std::optional<std::uint32_t> last_effective_hz;
     std::optional<std::string> last_map_id;
@@ -242,6 +245,15 @@ void reader_loop(
                 case race::v1::ParticipantServerEvent::kSettings: {
                     const auto effective_hz = static_cast<std::uint32_t>(event.settings().effective_hz());
                     const auto map_id = event.settings().map_id();
+                    if (expected_map_id.has_value() && !expected_map_id->empty() && !map_id.empty() &&
+                        map_id != *expected_map_id) {
+                        set_fatal(
+                            state,
+                            "Stream map_id mismatch: prepared='" + *expected_map_id +
+                                "', stream='" + map_id + "'."
+                        );
+                        break;
+                    }
                     std::optional<std::uint32_t> current_effective_hz;
                     std::optional<std::string> current_map_id;
                     {
@@ -476,9 +488,19 @@ namespace hackarena3::detail {
 void run_participant_loop(
     BotProtocol& bot,
     RaceApi& api,
-    GameTokenProvider& token_provider,
-    BotContext& ctx
+    BotContext& ctx,
+    const StreamMetadataProvider& metadata_provider,
+    GameTokenProvider* token_provider,
+    bool allow_auth_refresh,
+    const std::optional<std::string>& stream_method,
+    const std::optional<std::string>& expected_map_id
 ) {
+    if (allow_auth_refresh && token_provider == nullptr) {
+        throw RuntimeError(
+            "Internal error: token_provider is required when allow_auth_refresh=true."
+        );
+    }
+
     int retry_attempt = 0;
     std::optional<Controls> latest_controls;
 
@@ -523,16 +545,49 @@ void run_participant_loop(
         );
 
         grpc::ClientContext client_context;
-        for (const auto& [key, value] : race_metadata(token_provider)) {
+        std::vector<std::pair<std::string, std::string>> stream_metadata;
+        try {
+            stream_metadata = metadata_provider();
+        } catch (const RuntimeError&) {
+            throw;
+        } catch (const std::exception& exc) {
+            throw RuntimeError(std::string("Failed to prepare stream metadata: ") + exc.what());
+        }
+        for (const auto& [key, value] : stream_metadata) {
             client_context.AddMetadata(key, value);
         }
 
-        auto stream = api.participant->Stream(&client_context);
+        std::unique_ptr<grpc::ClientReaderWriterInterface<
+            race::v1::ParticipantClientMessage,
+            race::v1::ParticipantServerEvent>>
+            stream;
+        if (stream_method.has_value()) {
+            grpc::internal::RpcMethod rpc_method(
+                stream_method->c_str(),
+                grpc::internal::RpcMethod::BIDI_STREAMING,
+                api.channel
+            );
+            stream.reset(grpc::internal::ClientReaderWriterFactory<
+                         race::v1::ParticipantClientMessage,
+                         race::v1::ParticipantServerEvent>::Create(
+                api.channel.get(),
+                rpc_method,
+                &client_context
+            ));
+        } else {
+            stream = api.participant->Stream(&client_context);
+        }
         if (!stream) {
             throw RuntimeError("Race participant stream open failed.");
         }
 
-        std::thread reader(reader_loop, stream.get(), std::ref(state), std::ref(ctx));
+        std::thread reader(
+            reader_loop,
+            stream.get(),
+            std::ref(state),
+            std::ref(ctx),
+            std::cref(expected_map_id)
+        );
         std::thread callback(callback_loop, std::ref(bot), std::ref(state), std::ref(ctx));
         std::thread writer(writer_loop, stream.get(), std::ref(state));
 
@@ -546,7 +601,9 @@ void run_participant_loop(
             }
             std::this_thread::sleep_for(detail::kRuntimePollInterval);
             try {
-                if (token_provider.ensure_fresh(detail::kTokenRefreshSkewSeconds)) {
+                if (allow_auth_refresh &&
+                    token_provider != nullptr &&
+                    token_provider->ensure_fresh(detail::kTokenRefreshSkewSeconds)) {
                     token_rotated = true;
                     request_stop(state);
                     break;
@@ -591,7 +648,15 @@ void run_participant_loop(
 
         if (final_status.error_code() == grpc::StatusCode::UNAUTHENTICATED ||
             final_status.error_code() == grpc::StatusCode::PERMISSION_DENIED) {
-            token_provider.refresh();
+            if (!allow_auth_refresh || token_provider == nullptr) {
+                throw RuntimeError(
+                    "Authentication failed (" + status_name(final_status) + "): " +
+                    (final_status.error_message().empty()
+                         ? std::string("no details")
+                         : final_status.error_message())
+                );
+            }
+            token_provider->refresh();
             retry_attempt = 0;
             continue;
         }

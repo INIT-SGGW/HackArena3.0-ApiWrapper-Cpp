@@ -12,6 +12,7 @@
 #include "auth.hpp"
 #include "detail/constants.hpp"
 #include "detail/grpc_utils.hpp"
+#include "detail/string_utils.hpp"
 #include "game_token.hpp"
 #include "runtime_common.hpp"
 #include "runtime_convert.hpp"
@@ -21,6 +22,8 @@
 #include "hackarena3/errors.hpp"
 
 namespace {
+
+constexpr char kOfficialStreamSuffix[] = "/race.v1.RaceParticipantService/Stream";
 
 void add_metadata(
     grpc::ClientContext& context,
@@ -75,11 +78,29 @@ void log_startup_diagnostics(const hackarena3::RuntimeConfig& config) {
               << '\n';
 }
 
+std::string official_stream_method(const std::string& rpc_prefix) {
+    auto prefix = hackarena3::detail::trim(rpc_prefix);
+    while (!prefix.empty() && prefix.back() == '/') {
+        prefix.pop_back();
+    }
+    if (prefix.empty() || prefix == "/") {
+        throw hackarena3::RuntimeError(
+            "Official rpc_prefix is empty; cannot build stream RPC method."
+        );
+    }
+    if (!prefix.starts_with('/')) {
+        prefix.insert(prefix.begin(), '/');
+    }
+    return prefix + std::string(kOfficialStreamSuffix);
+}
+
 }  // namespace
 
 namespace hackarena3::detail {
 
-void run_runtime(BotProtocol& bot, const RuntimeConfig& config) {
+namespace {
+
+void run_runtime_sandbox(BotProtocol& bot, const RuntimeConfig& config) {
     log_startup_diagnostics(config);
     const auto member_jwt = fetch_member_jwt(config.ha_auth_bin);
     auto broker_api = create_broker_api(config);
@@ -142,7 +163,75 @@ void run_runtime(BotProtocol& bot, const RuntimeConfig& config) {
     ctx.tick = 0;
     ctx.raw.reset();
 
-    run_participant_loop(bot, api, token_provider, ctx);
+    run_participant_loop(
+        bot,
+        api,
+        ctx,
+        [&token_provider] { return race_metadata(token_provider); },
+        &token_provider,
+        true
+    );
+}
+
+void run_runtime_official(BotProtocol& bot, const OfficialRuntimeConfig& config) {
+    auto api = create_official_backend_api(config.grpc_target);
+    const auto metadata = race_metadata_official(config.team_token, config.auth_token);
+    const auto prepare_response = prepare_official_join(api, config.rpc_prefix, metadata);
+    const auto track_data = fetch_track_data_official(
+        api,
+        config.rpc_prefix,
+        metadata,
+        prepare_response.map_id()
+    );
+    const auto track_layout = build_track_layout(track_data);
+    const auto pit_count =
+        track_layout.pitstop.enter.size() + track_layout.pitstop.fix.size() +
+        track_layout.pitstop.exit.size();
+
+    std::cerr << "[ha3-wrapper] Official mode prepared: car_id=" << prepare_response.car_id()
+              << " map_id=" << prepare_response.map_id()
+              << " target=" << config.grpc_target
+              << " rpc_prefix=" << config.rpc_prefix
+              << " samples=" << track_data.centerline_samples_size()
+              << " lap_length_m=" << track_data.lap_length_m()
+              << " pit_samples=" << pit_count
+              << " pit_length_m=" << track_layout.pitstop.length_m << '\n';
+
+    BotContext ctx;
+    ctx.car_id = prepare_response.car_id();
+    ctx.map_id = prepare_response.map_id();
+    ctx.car_dimensions = CarDimensions {};
+    ctx.requested_hz = detail::kRequestedHz;
+    ctx.track_data = std::make_shared<race::v1::TrackData>(track_data);
+    ctx.track = track_layout;
+    ctx.effective_hz = std::nullopt;
+    ctx.tick = 0;
+    ctx.raw.reset();
+
+    run_participant_loop(
+        bot,
+        api,
+        ctx,
+        [metadata] { return metadata; },
+        nullptr,
+        false,
+        official_stream_method(config.rpc_prefix),
+        prepare_response.map_id()
+    );
+}
+
+}  // namespace
+
+void run_runtime(
+    BotProtocol& bot,
+    const RuntimeConfig& config,
+    const std::optional<OfficialRuntimeConfig>& official_config
+) {
+    if (official_config.has_value()) {
+        run_runtime_official(bot, *official_config);
+        return;
+    }
+    run_runtime_sandbox(bot, config);
 }
 
 }  // namespace hackarena3::detail

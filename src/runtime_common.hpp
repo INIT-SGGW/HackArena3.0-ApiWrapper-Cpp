@@ -29,6 +29,7 @@ std::shared_ptr<grpc::Channel> open_secure_channel(
     const ParsedApiTarget& target,
     const ResolvedTarget& resolved
 );
+std::shared_ptr<grpc::Channel> open_secure_channel(const std::string& target);
 std::shared_ptr<grpc::Channel> open_insecure_channel(const std::string& target);
 
 }  // namespace hackarena3::detail

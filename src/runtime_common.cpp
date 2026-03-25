@@ -211,6 +211,12 @@ std::shared_ptr<grpc::Channel> open_secure_channel(
     return grpc::CreateCustomChannel(resolved.dial_target, grpc::SslCredentials({}), args);
 }
 
+std::shared_ptr<grpc::Channel> open_secure_channel(const std::string& target) {
+    grpc::ChannelArguments args;
+    args.SetInt(GRPC_ARG_ENABLE_HTTP_PROXY, 0);
+    return grpc::CreateCustomChannel(target, grpc::SslCredentials({}), args);
+}
+
 std::shared_ptr<grpc::Channel> open_insecure_channel(const std::string& target) {
     grpc::ChannelArguments args;
     args.SetInt(GRPC_ARG_ENABLE_HTTP_PROXY, 0);

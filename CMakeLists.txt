@@ -6,7 +6,7 @@ project(
     LANGUAGES CXX
 )
 
-set(HACKARENA3_WRAPPER_VERSION "0.1.0b4")
+set(HACKARENA3_WRAPPER_VERSION "0.1.0b7")
 set(HACKARENA3_PACKAGE_NAME "hackarena3")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -201,14 +201,15 @@ endif()
 
 add_custom_command(
     OUTPUT "${HACKARENA3_TEMPLATE_ARCHIVE}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_BINARY_DIR}/release-assets"
     COMMAND
-        "${CMAKE_COMMAND}" -E tar "cf"
-        "${HACKARENA3_TEMPLATE_ARCHIVE}"
-        --format=zip
-        template
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_COMMAND}"
+        -DREPO_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+        -DSTAGING_DIR=${CMAKE_BINARY_DIR}/template-release
+        -DOUTPUT_ZIP=${HACKARENA3_TEMPLATE_ARCHIVE}
+        -DWRAPPER_VERSION=${HACKARENA3_WRAPPER_VERSION}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageTemplateRelease.cmake"
     DEPENDS
+        cmake/PackageTemplateRelease.cmake
         template/CMakeLists.txt
         template/README.md
         template/system/manifest.toml
