@@ -216,6 +216,15 @@ hackarena3::TireSlipPerWheel tire_slip_from_proto(const race::v1::TireSlipPerWhe
     };
 }
 
+hackarena3::CommandCooldownState command_cooldowns_from_proto(
+    const race::v1::CommandCooldownState& value
+) {
+    return hackarena3::CommandCooldownState {
+        .back_to_track_remaining_ms = value.back_to_track_remaining_ms(),
+        .emergency_pitstop_remaining_ms = value.emergency_pitstop_remaining_ms(),
+    };
+}
+
 }  // namespace
 
 namespace hackarena3::detail {
@@ -246,6 +255,8 @@ RaceSnapshot build_race_snapshot(const race::v1::ParticipantSnapshot& raw) {
     const auto tire_temperature =
         tire_temperature_from_proto(raw.self().telemetry().tire_temperature_celsius());
     const auto tire_slip = tire_slip_from_proto(raw.self().telemetry().tire_slip());
+    const auto command_cooldowns =
+        command_cooldowns_from_proto(raw.self().telemetry().command_cooldowns());
     const auto& pit_runtime = raw.self().telemetry().pit_runtime();
 
     return RaceSnapshot {
@@ -277,6 +288,8 @@ RaceSnapshot build_race_snapshot(const race::v1::ParticipantSnapshot& raw) {
             .last_pit_source = pit_entry_source_from_raw(
                 static_cast<std::int32_t>(pit_runtime.last_pit_source())
             ),
+            .last_pit_lap = pit_runtime.last_pit_lap(),
+            .command_cooldowns = command_cooldowns,
         },
         .opponents = std::move(opponents),
         .tire_type_raw = tire_type_raw,

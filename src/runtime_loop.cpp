@@ -217,7 +217,8 @@ void handle_command_ack(SessionState& state, const race::v1::ParticipantCommandA
                   << " command=" << pending->command_kind
                   << " command_type=" << race::v1::ParticipantCommandType_Name(ack.command_type())
                   << " reason="
-                  << race::v1::ParticipantCommandRejectReason_Name(ack.rejected_reason()) << '\n';
+                  << race::v1::ParticipantCommandRejectReason_Name(ack.rejected_reason())
+                  << " cooldown_remaining_ms=" << ack.cooldown_remaining_ms() << '\n';
     }
 }
 

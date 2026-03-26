@@ -6,6 +6,7 @@ Release model:
 
 - the reusable wrapper/library is released as a self-contained C++ SDK package built from the install tree, analogous to publishing the Python package from `/srv/hackarena3/`
 - the contents of `template/` are released separately as a zip asset, analogous to the Python template release asset
+- typed race snapshots expose `RaceSnapshot.car.last_pit_lap` and `RaceSnapshot.car.command_cooldowns`
 
 ## Clone and Setup
 
@@ -140,9 +141,9 @@ cmake --build build --target hackarena3_sdk_zip
 
 This produces a package named like:
 
-- Windows: `hackarena3-cpp-sdk-0.1.0b7-Windows-AMD64.zip`
-- Linux: `hackarena3-cpp-sdk-0.1.0b7-Linux-x86_64.zip`
-- macOS: `hackarena3-cpp-sdk-0.1.0b7-Darwin-x86_64.zip`
+- Windows: `hackarena3-cpp-sdk-0.1.0b8-Windows-AMD64.zip`
+- Linux: `hackarena3-cpp-sdk-0.1.0b8-Linux-x86_64.zip`
+- macOS: `hackarena3-cpp-sdk-0.1.0b8-Darwin-x86_64.zip`
 
 Create the template zip asset:
 
@@ -152,7 +153,7 @@ cmake --build build --target hackarena3_template_zip --config Release
 
 The output is written to:
 
-- `build/release-assets/hackarena3-cpp-template-0.1.0b7.zip`
+- `build/release-assets/hackarena3-cpp-template-0.1.0b8.zip`
 
 Recommended GitHub Release layout:
 
@@ -199,7 +200,7 @@ For the verified Windows/MSVC SDK zip consumer flow, no external `vcpkg` install
 Example consumer configure command from release zips only on Windows:
 
 ```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\path\to\hackarena3-cpp-sdk-0.1.0b7-Windows-AMD64
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\path\to\hackarena3-cpp-sdk-0.1.0b8-Windows-AMD64
 ```
 
 ### Linux
@@ -364,4 +365,4 @@ If `--sandbox_id` is omitted:
 - The wrapper is a CMake project, not an installable Python package, so version reporting is compile-time instead of package-metadata driven.
 - The release equivalent of the Python wheel is a self-contained C++ SDK package for CMake consumers, not a language-specific package-manager artifact.
 - The Python wrapper catches `KeyboardInterrupt` and returns `130`; the C++ port currently relies on normal process signal behavior for `Ctrl+C`.
-- The current Python wrapper `0.1.0b7` simplified `BotContext` further. The C++ port now includes the new `car_dimensions` bootstrap data, but it still keeps `track_data` and `raw` on `BotContext` for compatibility with the existing C++ API surface.
+- The current Python wrapper `0.1.0b8` simplified `BotContext` further. The C++ port now includes the new `car_dimensions` bootstrap data, but it still keeps `track_data` and `raw` on `BotContext` for compatibility with the existing C++ API surface.

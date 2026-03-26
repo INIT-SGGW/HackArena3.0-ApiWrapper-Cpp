@@ -180,6 +180,11 @@ struct TireSlipPerWheel {
     double rear_right {};
 };
 
+struct CommandCooldownState {
+    std::uint32_t back_to_track_remaining_ms {};
+    std::uint32_t emergency_pitstop_remaining_ms {};
+};
+
 struct CarState {
     std::uint64_t car_id {};
     Vec3 position;
@@ -204,6 +209,8 @@ struct CarState {
     std::uint64_t last_pit_time_ms {};
     std::int32_t last_pit_source_raw {};
     std::optional<PitEntrySource> last_pit_source;
+    std::uint32_t last_pit_lap {};
+    CommandCooldownState command_cooldowns;
 
     [[nodiscard]] double speed_kmh() const noexcept {
         return speed_mps * 3.6;
