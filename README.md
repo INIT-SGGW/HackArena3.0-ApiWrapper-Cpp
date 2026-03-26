@@ -33,7 +33,7 @@ git submodule update --init --recursive
 There are two different workflows:
 
 - build the wrapper from source
-- consume the released SDK zip
+- consume the released SDK tar.gz archive
 
 For building the wrapper from source:
 
@@ -47,10 +47,10 @@ For building the wrapper from source:
   - macOS: AppleClang with CMake
   - `vcpkg` checked out locally
 
-For consuming the released Windows SDK zip:
+For consuming the released Windows SDK tar.gz archive:
 
 - `vcpkg` is not required
-- the SDK zip already bundles the required third-party headers, libraries, tools, and CMake package configs
+- the SDK tar.gz archive already bundles the required third-party headers, libraries, tools, and CMake package configs
 - use Visual Studio/MSVC on Windows
 
 This project is intentionally documented for MSVC on Windows. MinGW, Conda-discovered C++ toolchains, and Conda-managed C++ dependencies are not the primary path.
@@ -63,7 +63,7 @@ For CLion on Windows:
 
 ## vcpkg Setup
 
-This section applies to building the wrapper from source, not to consuming the released Windows SDK zip.
+This section applies to building the wrapper from source, not to consuming the released Windows SDK tar.gz archive.
 
 Install dependencies with the triplet matching your machine:
 
@@ -110,7 +110,7 @@ If CLion is left on the bundled `MinGW` toolchain while using `x64-windows` vcpk
 
 ## Packaging and Release Assets
 
-The C++ equivalent of the Python wheel in this repository is a self-contained SDK zip containing:
+The C++ equivalent of the Python wheel in this repository is a self-contained SDK tar.gz archive containing:
 
 - exported CMake package files
 - public headers
@@ -130,20 +130,20 @@ Create the SDK release package with the explicit SDK target:
 Windows:
 
 ```powershell
-cmake --build build --target hackarena3_sdk_zip --config Release
+cmake --build build --target hackarena3_sdk_tgz --config Release
 ```
 
 Linux/macOS:
 
 ```bash
-cmake --build build --target hackarena3_sdk_zip
+cmake --build build --target hackarena3_sdk_tgz
 ```
 
 This produces a package named like:
 
-- Windows: `hackarena3-cpp-sdk-0.1.0b8-Windows-AMD64.zip`
-- Linux: `hackarena3-cpp-sdk-0.1.0b8-Linux-x86_64.zip`
-- macOS: `hackarena3-cpp-sdk-0.1.0b8-Darwin-x86_64.zip`
+- Windows: `hackarena3-cpp-sdk-0.1.0b8-Windows-AMD64.tar.gz`
+- Linux: `hackarena3-cpp-sdk-0.1.0b8-Linux-x86_64.tar.gz`
+- macOS: `hackarena3-cpp-sdk-0.1.0b8-Darwin-x86_64.tar.gz`
 
 Create the template zip asset:
 
@@ -157,7 +157,7 @@ The output is written to:
 
 Recommended GitHub Release layout:
 
-- one SDK package asset produced by `hackarena3_sdk_zip`
+- one SDK package asset produced by `hackarena3_sdk_tgz`
 - optionally one template asset produced by `hackarena3_template_zip`
 
 ## GitHub Actions Release Build
@@ -166,7 +166,7 @@ The repository includes a cross-platform GitHub Actions workflow at `.github/wor
 
 It builds only the SDK package target:
 
-- `hackarena3_sdk_zip`
+- `hackarena3_sdk_tgz`
 
 Target platforms:
 
@@ -176,8 +176,8 @@ Target platforms:
 
 Trigger behavior:
 
-- `workflow_dispatch`: builds the SDK archives and uploads them as workflow artifacts
-- tag push matching `v*`: builds the SDK archives and uploads them to the GitHub Release for that tag
+- `workflow_dispatch`: builds the SDK tar.gz archives and uploads them as workflow artifacts
+- tag push matching `v*`: builds the SDK tar.gz archives and uploads them to the GitHub Release for that tag
 
 Workflow requirement for private proto submodules:
 
@@ -190,14 +190,14 @@ Workflow requirement for private proto submodules:
 
 Consumer workflow from release assets only:
 
-1. extract the SDK zip
+1. extract the SDK tar.gz archive
 2. extract the template zip
 3. configure the template with `-DHACKARENA3_SDK_ROOT=<extracted-sdk-root>`
 4. build the template project
 
-For the verified Windows/MSVC SDK zip consumer flow, no external `vcpkg` installation is required.
+For the verified Windows/MSVC SDK tar.gz consumer flow, no external `vcpkg` installation is required.
 
-Example consumer configure command from release zips only on Windows:
+Example consumer configure command from release archives only on Windows:
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\path\to\hackarena3-cpp-sdk-0.1.0b8-Windows-AMD64

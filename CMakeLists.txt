@@ -239,11 +239,11 @@ set(CPACK_PACKAGE_FILE_NAME
     "${HACKARENA3_PACKAGE_NAME}-cpp-sdk-${HACKARENA3_WRAPPER_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
-set(CPACK_GENERATOR "ZIP")
+set(CPACK_GENERATOR "TGZ")
 include(CPack)
 
 add_custom_target(
-    hackarena3_sdk_zip
+    hackarena3_sdk_tgz
     COMMAND "${CMAKE_CPACK_COMMAND}" --config "${CMAKE_BINARY_DIR}/CPackConfig.cmake" -C $<CONFIG>
     DEPENDS hackarena3 hackarena3_proto
     COMMENT "Creating SDK release package with CPack"
