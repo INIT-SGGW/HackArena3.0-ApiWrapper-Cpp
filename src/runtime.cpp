@@ -43,9 +43,6 @@ std::string status_name(const grpc::Status& status) {
 void log_startup_diagnostics(const hackarena3::RuntimeConfig& config) {
     const auto parsed_api_target = hackarena3::detail::parse_api_addr(config.api_addr);
     const auto cwd = std::filesystem::current_path().string();
-    const auto dotenv_path = config.dotenv_path.value_or(
-        (std::filesystem::current_path() / "user" / ".env").string()
-    );
     std::string api_dial_target = "<unresolved>";
     std::string api_resolved_addresses = "<unresolved>";
     try {
@@ -68,9 +65,6 @@ void log_startup_diagnostics(const hackarena3::RuntimeConfig& config) {
               << " api_target=" << parsed_api_target.target()
               << " api_dial_target=" << api_dial_target
               << " api_resolved_addresses=" << api_resolved_addresses
-              << " api_addr_source=" << config.api_addr_source
-              << " dotenv_path=" << dotenv_path
-              << " dotenv_loaded=" << (config.dotenv_loaded ? "true" : "false")
               << " sandbox_id="
               << (config.sandbox_id.has_value() ? *config.sandbox_id : "<interactive>")
               << " ha_auth_bin="
@@ -157,11 +151,9 @@ void run_runtime_sandbox(BotProtocol& bot, const RuntimeConfig& config) {
     ctx.map_id = join_response.map_id();
     ctx.car_dimensions = CarDimensions {};
     ctx.requested_hz = detail::kRequestedHz;
-    ctx.track_data = std::make_shared<race::v1::TrackData>(track_data);
     ctx.track = track_layout;
     ctx.effective_hz = std::nullopt;
     ctx.tick = 0;
-    ctx.raw.reset();
 
     run_participant_loop(
         bot,
@@ -202,11 +194,9 @@ void run_runtime_official(BotProtocol& bot, const OfficialRuntimeConfig& config)
     ctx.map_id = prepare_response.map_id();
     ctx.car_dimensions = CarDimensions {};
     ctx.requested_hz = detail::kRequestedHz;
-    ctx.track_data = std::make_shared<race::v1::TrackData>(track_data);
     ctx.track = track_layout;
     ctx.effective_hz = std::nullopt;
     ctx.tick = 0;
-    ctx.raw.reset();
 
     run_participant_loop(
         bot,

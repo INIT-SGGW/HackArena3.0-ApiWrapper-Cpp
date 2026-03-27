@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 4.24)
 
 project(
     hackarena3_cpp_wrapper
@@ -18,7 +18,7 @@ set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
 # =========================
 # Versions
 # =========================
-set(HACKARENA3_WRAPPER_VERSION "0.1.0b8")
+set(HACKARENA3_WRAPPER_VERSION "0.1.0b9")
 set(HACKARENA3_PACKAGE_NAME "hackarena3")
 
 # =========================

@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-#include <google/protobuf/message.h>
-
 #include "race/v1/race.pb.h"
 #include "race/v1/telemetry.pb.h"
 #include "race/v1/track.pb.h"
@@ -17,7 +15,6 @@
 namespace hackarena3 {
 
 enum class GearShift : std::int32_t {
-    Unspecified = race::v1::GEAR_SHIFT_UNSPECIFIED,
     None = race::v1::GEAR_SHIFT_NONE,
     Upshift = race::v1::GEAR_SHIFT_UPSHIFT,
     Downshift = race::v1::GEAR_SHIFT_DOWNSHIFT,
@@ -73,6 +70,7 @@ enum class PitstopZoneFlag : std::uint32_t {
     Enter = race::v1::PITSTOP_ZONE_FLAG_ENTER,
     Fix = race::v1::PITSTOP_ZONE_FLAG_FIX,
     Exit = race::v1::PITSTOP_ZONE_FLAG_EXIT,
+    Unspecified = None,
 };
 
 enum class PitEntrySource : std::int32_t {
@@ -95,8 +93,7 @@ struct CarDimensions {
 
 struct GroundWidth {
     double width_m {};
-    std::int32_t ground_type_raw {};
-    std::optional<GroundType> ground_type;
+    GroundType ground_type {};
 };
 
 struct CenterlinePoint {
@@ -131,26 +128,24 @@ struct TrackLayout {
 };
 
 struct Controls {
-    double throttle {};
-    double brake {};
-    double steering {};
-    GearShift gear_shift {GearShift::None};
-    double brake_balancer {0.5};
-    double differential_lock {};
+    const double throttle {};
+    const double brake {};
+    const double steering {};
+    const GearShift gear_shift {GearShift::None};
+    const double brake_balancer {0.5};
+    const double differential_lock {};
 };
 
 struct Quaternion {
     double x {};
     double y {};
     double z {};
-    double w {1.0};
+    double w {};
 };
 
 struct GhostModeState {
     bool can_collide_now {};
-    std::int32_t phase_raw {};
-    std::optional<GhostModePhase> phase;
-    std::vector<std::int32_t> blockers_raw;
+    GhostModePhase phase {};
     std::vector<GhostModeBlocker> blockers;
     std::int32_t exit_delay_remaining_ms {};
 
@@ -190,25 +185,21 @@ struct CarState {
     Vec3 position;
     Quaternion orientation;
     double speed_mps {};
-    std::int32_t gear_raw {};
-    DriveGear gear {DriveGear::Neutral};
+    DriveGear gear {};
     double engine_rpm {};
     std::uint64_t last_applied_client_seq {};
-    std::uint32_t pitstop_zone_flags {};
+    PitstopZoneFlag pitstop_zone_flags {};
     std::uint32_t wheels_in_pitstop {};
-    std::optional<GhostModeState> ghost_mode;
-    std::int32_t tire_type_raw {};
-    TireType tire_type {TireType::Unspecified};
-    std::int32_t next_pit_tire_type_raw {};
-    TireType next_pit_tire_type {TireType::Unspecified};
+    GhostModeState ghost_mode;
+    TireType tire_type {};
+    TireType next_pit_tire_type {};
     TireWearPerWheel tire_wear;
     TireTemperaturePerWheel tire_temperature_celsius;
     TireSlipPerWheel tire_slip;
     bool pit_request_active {};
     std::uint32_t pit_emergency_lock_remaining_ms {};
     std::uint64_t last_pit_time_ms {};
-    std::int32_t last_pit_source_raw {};
-    std::optional<PitEntrySource> last_pit_source;
+    PitEntrySource last_pit_source {};
     std::uint32_t last_pit_lap {};
     CommandCooldownState command_cooldowns;
 
@@ -221,7 +212,7 @@ struct OpponentState {
     std::uint64_t car_id {};
     Vec3 position;
     Quaternion orientation;
-    std::optional<GhostModeState> ghost_mode;
+    GhostModeState ghost_mode;
 };
 
 struct RaceSnapshot {
@@ -229,10 +220,6 @@ struct RaceSnapshot {
     std::uint64_t server_time_ms {};
     CarState car;
     std::vector<OpponentState> opponents;
-    std::int32_t tire_type_raw {};
-    TireType tire_type {TireType::Unspecified};
-    TireWearPerWheel tire_wear;
-    TireTemperaturePerWheel tire_temperature_celsius;
     std::shared_ptr<const race::v1::ParticipantSnapshot> raw;
 };
 
@@ -242,11 +229,9 @@ public:
     std::string map_id;
     CarDimensions car_dimensions;
     std::uint32_t requested_hz {};
-    std::shared_ptr<const race::v1::TrackData> track_data;
     TrackLayout track;
     std::optional<std::uint32_t> effective_hz;
     std::uint64_t tick {};
-    std::shared_ptr<const google::protobuf::Message> raw;
 
     void set_controls(
         double throttle,

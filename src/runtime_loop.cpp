@@ -139,7 +139,6 @@ race::v1::GearShift normalize_gear_shift(hackarena3::GearShift gear_shift) {
         case hackarena3::GearShift::Downshift:
             return race::v1::GEAR_SHIFT_DOWNSHIFT;
         case hackarena3::GearShift::None:
-        case hackarena3::GearShift::Unspecified:
         default:
             return race::v1::GEAR_SHIFT_NONE;
     }
@@ -148,7 +147,7 @@ race::v1::GearShift normalize_gear_shift(hackarena3::GearShift gear_shift) {
 void set_desired_controls(SessionState& state, const hackarena3::Controls& controls) {
     {
         std::lock_guard lock(state.mutex);
-        state.desired_controls = controls;
+        state.desired_controls.emplace(controls);
         state.controls_dirty = true;
         state.outbound_ready = true;
     }
@@ -352,6 +351,7 @@ void callback_loop(
 
         processed_version = version;
         ctx.tick = snapshot->tick;
+        ctx.car_id = snapshot->car.car_id;
         ctx.effective_hz = effective_hz;
         if (map_id.has_value()) {
             ctx.map_id = *map_id;
@@ -507,13 +507,15 @@ void run_participant_loop(
 
     for (;;) {
         SessionState state;
-        state.desired_controls = latest_controls;
+        if (latest_controls.has_value()) {
+            state.desired_controls.emplace(*latest_controls);
+        }
         state.controls_dirty = latest_controls.has_value();
         state.outbound_ready = state.controls_dirty;
 
         ctx.attach_runtime_callbacks(
             [&](const Controls& controls) {
-                latest_controls = controls;
+                latest_controls.emplace(controls);
                 set_desired_controls(state, controls);
             },
             [&] {

@@ -11,7 +11,7 @@ Expected release assets:
 
 1. Extract the SDK zip somewhere, for example:
 
-   `C:\sdk\hackarena3-cpp-sdk-0.1.0b7-Windows-AMD64`
+   `C:\sdk\hackarena3-cpp-sdk-0.1.0b9-Windows-AMD64`
 
 2. Extract this template zip somewhere, for example:
 
@@ -20,7 +20,7 @@ Expected release assets:
 3. Configure the template:
 
    ```powershell
-   cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\sdk\hackarena3-cpp-sdk-0.1.0b7-Windows-AMD64
+   cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\sdk\hackarena3-cpp-sdk-0.1.0b9-Windows-AMD64
    ```
 
 4. Build:
@@ -53,5 +53,5 @@ Use the `Visual Studio` toolchain with Architecture `amd64`.
 CMake options:
 
 ```text
--DHACKARENA3_SDK_ROOT=C:\sdk\hackarena3-cpp-sdk-0.1.0b7-Windows-AMD64
+-DHACKARENA3_SDK_ROOT=C:\sdk\hackarena3-cpp-sdk-0.1.0b9-Windows-AMD64
 ```

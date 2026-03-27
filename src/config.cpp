@@ -12,20 +12,15 @@
 
 namespace {
 
-struct DotenvLoadResult {
-    std::filesystem::path path;
-    bool loaded {};
-};
-
 struct ParsedOfficialEndpoint {
     std::string grpc_target;
     std::string rpc_prefix;
 };
 
-DotenvLoadResult load_dotenv_if_present() {
+void load_dotenv_if_present() {
     const auto dotenv_path = std::filesystem::current_path() / "user" / ".env";
     if (!std::filesystem::is_regular_file(dotenv_path)) {
-        return DotenvLoadResult {.path = dotenv_path, .loaded = false};
+        return;
     }
 
     std::ifstream input(dotenv_path);
@@ -52,20 +47,13 @@ DotenvLoadResult load_dotenv_if_present() {
         hackarena3::detail::set_env_if_unset(key, value);
     }
 
-    return DotenvLoadResult {.path = dotenv_path, .loaded = true};
 }
 
-std::pair<std::string, std::string> required_api_addr(bool api_env_was_preexisting, bool dotenv_loaded) {
+std::string required_api_addr() {
     const auto api_url = hackarena3::detail::get_env(hackarena3::kEnvApiUrl);
     const auto trimmed = hackarena3::detail::trim(api_url.value_or(""));
     if (!trimmed.empty()) {
-        if (api_env_was_preexisting) {
-            return {trimmed, "environment"};
-        }
-        if (dotenv_loaded) {
-            return {trimmed, "user/.env"};
-        }
-        return {trimmed, "environment"};
+        return trimmed;
     }
     throw hackarena3::ConfigError(
         std::string("Missing required runtime env: ") + hackarena3::kEnvApiUrl
@@ -190,22 +178,13 @@ ParsedOfficialEndpoint parse_official_endpoint(const std::string& endpoint) {
 namespace hackarena3 {
 
 RuntimeConfig load_runtime_config(bool require_api_addr) {
-    const auto api_env_was_preexisting = detail::get_env(kEnvApiUrl).has_value();
-    const auto dotenv_result = load_dotenv_if_present();
+    load_dotenv_if_present();
 
     RuntimeConfig config;
-    config.dotenv_path = dotenv_result.path.string();
-    config.dotenv_loaded = dotenv_result.loaded;
     if (require_api_addr) {
-        const auto [api_addr, api_addr_source] = required_api_addr(
-            api_env_was_preexisting,
-            dotenv_result.loaded
-        );
-        config.api_addr = api_addr;
-        config.api_addr_source = api_addr_source;
+        config.api_addr = required_api_addr();
     } else {
         config.api_addr = optional_api_addr();
-        config.api_addr_source = config.api_addr.empty() ? "unset" : "environment";
     }
 
     const auto ha_auth_bin = detail::trim(detail::get_env(kEnvHaAuthBin).value_or(""));
