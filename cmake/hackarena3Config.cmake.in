@@ -10,9 +10,9 @@ if(EXISTS "${_hackarena3_vendor_prefix}/share")
     list(PREPEND CMAKE_PREFIX_PATH "${_hackarena3_vendor_prefix}")
 endif()
 
-find_dependency(Protobuf CONFIG REQUIRED)
-find_dependency(gRPC CONFIG REQUIRED)
-find_dependency(nlohmann_json CONFIG REQUIRED)
+#find_dependency(Protobuf CONFIG REQUIRED)
+#find_dependency(gRPC CONFIG REQUIRED)
+#find_dependency(nlohmann_json CONFIG REQUIRED)
 find_dependency(Threads REQUIRED)
 
 set(CMAKE_PREFIX_PATH "${_hackarena3_saved_prefix_path}")
