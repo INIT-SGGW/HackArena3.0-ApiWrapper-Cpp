@@ -15,9 +15,6 @@ struct RuntimeConfig {
     std::string api_addr;
     std::optional<std::string> ha_auth_bin;
     std::optional<std::string> sandbox_id;
-    std::string api_addr_source {"explicit"};
-    std::optional<std::string> dotenv_path;
-    bool dotenv_loaded {false};
 };
 
 struct OfficialRuntimeConfig {
