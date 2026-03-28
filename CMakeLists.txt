@@ -6,7 +6,7 @@ project(
     LANGUAGES CXX
 )
 
-set(HACKARENA3_WRAPPER_VERSION "0.1.0b9")
+set(HACKARENA3_WRAPPER_VERSION "0.1.0")
 set(HACKARENA3_PACKAGE_NAME "hackarena3")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -213,6 +213,7 @@ add_custom_command(
         template/CMakeLists.txt
         template/README.md
         template/system/manifest.toml
+        template/user/README.md
         template/user/src/bot/main.cpp
     COMMENT "Creating template release asset"
     VERBATIM

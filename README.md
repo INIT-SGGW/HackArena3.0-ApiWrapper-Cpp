@@ -141,9 +141,9 @@ cmake --build build --target hackarena3_sdk_tgz
 
 This produces a package named like:
 
-- Windows: `hackarena3-cpp-sdk-0.1.0b9-Windows-AMD64.tar.gz`
-- Linux: `hackarena3-cpp-sdk-0.1.0b9-Linux-x86_64.tar.gz`
-- macOS: `hackarena3-cpp-sdk-0.1.0b9-Darwin-x86_64.tar.gz`
+- Windows: `hackarena3-cpp-sdk-0.1.0-Windows-AMD64.tar.gz`
+- Linux: `hackarena3-cpp-sdk-0.1.0-Linux-x86_64.tar.gz`
+- macOS: `hackarena3-cpp-sdk-0.1.0-Darwin-x86_64.tar.gz`
 
 Create the template zip asset:
 
@@ -153,7 +153,7 @@ cmake --build build --target hackarena3_template_zip --config Release
 
 The output is written to:
 
-- `build/release-assets/hackarena3-cpp-template-0.1.0b9.zip`
+- `build/release-assets/hackarena3-cpp-template-0.1.0.zip`
 
 Recommended GitHub Release layout:
 
@@ -200,7 +200,7 @@ For the verified Windows/MSVC SDK tar.gz consumer flow, no external `vcpkg` inst
 Example consumer configure command from release archives only on Windows:
 
 ```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\path\to\hackarena3-cpp-sdk-0.1.0b9-Windows-AMD64
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DHACKARENA3_SDK_ROOT=C:\path\to\hackarena3-cpp-sdk-0.1.0-Windows-AMD64
 ```
 
 ### Linux
