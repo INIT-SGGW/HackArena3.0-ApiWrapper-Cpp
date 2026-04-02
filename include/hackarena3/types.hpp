@@ -8,16 +8,18 @@
 #include <string>
 #include <vector>
 
-#include "race/v1/race.pb.h"
-#include "race/v1/telemetry.pb.h"
-#include "race/v1/track.pb.h"
+namespace race {
+  namespace v1{
+    class ParticipantSnapshot;
+  }
+}
 
 namespace hackarena3 {
 
 enum class GearShift : std::int32_t {
-    None = race::v1::GEAR_SHIFT_NONE,
-    Upshift = race::v1::GEAR_SHIFT_UPSHIFT,
-    Downshift = race::v1::GEAR_SHIFT_DOWNSHIFT,
+    None = 1,
+    Upshift = 2,
+    Downshift = 3,
 };
 
 enum class DriveGear : std::int32_t {
@@ -34,50 +36,50 @@ enum class DriveGear : std::int32_t {
 };
 
 enum class TireType : std::int32_t {
-    Unspecified = race::v1::TIRE_TYPE_UNSPECIFIED,
-    Hard = race::v1::TIRE_TYPE_HARD,
-    Soft = race::v1::TIRE_TYPE_SOFT,
-    Wet = race::v1::TIRE_TYPE_WET,
+    Unspecified = 0,
+    Hard = 1,
+    Soft = 2,
+    Wet = 3,
 };
 
 enum class GroundType : std::int32_t {
-    Asphalt = race::v1::GROUND_TYPE_ASPHALT,
-    Grass = race::v1::GROUND_TYPE_GRASS,
-    Gravel = race::v1::GROUND_TYPE_GRAVEL,
-    Wall = race::v1::GROUND_TYPE_WALL,
-    Kerb = race::v1::GROUND_TYPE_KERB,
+    Asphalt = 0,
+    Grass = 1,
+    Gravel = 2,
+    Wall = 3,
+    Kerb = 4,
 };
 
 enum class GhostModePhase : std::int32_t {
-    Unspecified = race::v1::GHOST_MODE_PHASE_UNSPECIFIED,
-    Inactive = race::v1::GHOST_MODE_PHASE_INACTIVE,
-    Active = race::v1::GHOST_MODE_PHASE_ACTIVE,
-    PendingExit = race::v1::GHOST_MODE_PHASE_PENDING_EXIT,
+    Unspecified = 0,
+    Inactive = 1,
+    Active = 2,
+    PendingExit = 3,
 };
 
 enum class GhostModeBlocker : std::int32_t {
-    Unspecified = race::v1::GHOST_MODE_BLOCKER_UNSPECIFIED,
-    LapsRequirementNotMet = race::v1::GHOST_MODE_BLOCKER_LAPS_REQUIREMENT_NOT_MET,
-    ExitSpeedNotMet = race::v1::GHOST_MODE_BLOCKER_EXIT_SPEED_NOT_MET,
-    ExitDelayRunning = race::v1::GHOST_MODE_BLOCKER_EXIT_DELAY_RUNNING,
-    VehicleOverlapActive = race::v1::GHOST_MODE_BLOCKER_VEHICLE_OVERLAP_ACTIVE,
-    OverlapExitDelayRunning = race::v1::GHOST_MODE_BLOCKER_OVERLAP_EXIT_DELAY_RUNNING,
-    InPit = race::v1::GHOST_MODE_BLOCKER_IN_PIT,
+    Unspecified = 0,
+    LapsRequirementNotMet = 1,
+    ExitSpeedNotMet = 2,
+    ExitDelayRunning = 3,
+    VehicleOverlapActive = 4,
+    OverlapExitDelayRunning = 5,
+    InPit = 6,
 };
 
 enum class PitstopZoneFlag : std::uint32_t {
     None = 0,
-    Enter = race::v1::PITSTOP_ZONE_FLAG_ENTER,
-    Fix = race::v1::PITSTOP_ZONE_FLAG_FIX,
-    Exit = race::v1::PITSTOP_ZONE_FLAG_EXIT,
+    Enter = 1,
+    Fix = 2,
+    Exit = 4,
     Unspecified = None,
 };
 
 enum class PitEntrySource : std::int32_t {
-    Unspecified = race::v1::PIT_ENTRY_SOURCE_UNSPECIFIED,
-    BotDecision = race::v1::PIT_ENTRY_SOURCE_BOT_DECISION,
-    Requested = race::v1::PIT_ENTRY_SOURCE_REQUESTED,
-    Emergency = race::v1::PIT_ENTRY_SOURCE_EMERGENCY,
+    Unspecified = 0,
+    BotDecision = 1,
+    Requested = 2,
+    Emergency = 3,
 };
 
 struct Vec3 {

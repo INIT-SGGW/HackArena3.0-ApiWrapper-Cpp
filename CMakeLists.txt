@@ -2,16 +2,18 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
     hackarena3_cpp_wrapper
-    VERSION 0.1.0
+    VERSION 0.1.1
     LANGUAGES CXX
 )
 
-set(HACKARENA3_WRAPPER_VERSION "0.1.0")
+set(HACKARENA3_WRAPPER_VERSION "0.1.1")
 set(HACKARENA3_PACKAGE_NAME "hackarena3")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES "^[Aa][Rr][Mm].*-windows$")
@@ -63,13 +65,13 @@ target_include_directories(
     hackarena3_proto
     PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+        #"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 target_link_libraries(hackarena3_proto PUBLIC gRPC::grpc++ protobuf::libprotobuf)
 set_target_properties(hackarena3_proto PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(
-    hackarena3 STATIC
+  hackarena3 SHARED
     src/types.cpp
     src/client.cpp
     src/config.cpp
@@ -95,17 +97,16 @@ target_include_directories(
     hackarena3
     PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
 )
 
 target_link_libraries(
     hackarena3
-    PUBLIC
-        hackarena3_proto
     PRIVATE
+        hackarena3_proto
         Threads::Threads
         nlohmann_json::nlohmann_json
 )
@@ -121,7 +122,7 @@ target_link_libraries(bot PRIVATE hackarena3)
 set(HACKARENA3_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${HACKARENA3_PACKAGE_NAME}")
 
 install(
-    TARGETS hackarena3 hackarena3_proto
+    TARGETS hackarena3 
     EXPORT hackarena3Targets
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -130,11 +131,6 @@ install(
 
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
@@ -174,30 +170,6 @@ install(
 set(HACKARENA3_TEMPLATE_ARCHIVE
     "${CMAKE_BINARY_DIR}/release-assets/hackarena3-cpp-template-${HACKARENA3_WRAPPER_VERSION}.zip"
 )
-
-if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    set(HACKARENA3_VENDORED_VCPKG_PREFIX "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-endif()
-
-if(HACKARENA3_VENDORED_VCPKG_PREFIX AND EXISTS "${HACKARENA3_VENDORED_VCPKG_PREFIX}")
-    install(
-        DIRECTORY
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/bin"
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/debug"
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/include"
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/lib"
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/share"
-            "${HACKARENA3_VENDORED_VCPKG_PREFIX}/tools"
-        DESTINATION "vendor"
-        USE_SOURCE_PERMISSIONS
-        OPTIONAL
-    )
-else()
-    message(WARNING
-        "Vcpkg installed prefix was not detected. The generated SDK package will not bundle "
-        "third-party dependencies and will not be self-contained."
-    )
-endif()
 
 add_custom_command(
     OUTPUT "${HACKARENA3_TEMPLATE_ARCHIVE}"
@@ -240,7 +212,13 @@ set(CPACK_PACKAGE_FILE_NAME
     "${HACKARENA3_PACKAGE_NAME}-cpp-sdk-${HACKARENA3_WRAPPER_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
-set(CPACK_GENERATOR "TGZ")
+
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+else()
+    set(CPACK_GENERATOR "TGZ")
+endif()
+
 include(CPack)
 
 add_custom_target(
