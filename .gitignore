@@ -8,6 +8,7 @@ out/
 install/
 
 CMakeUserPresets.json
+CMakeSettings.json
 compile_commands.json
 
 *.zip
