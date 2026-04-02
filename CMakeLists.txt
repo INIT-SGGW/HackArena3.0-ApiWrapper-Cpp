@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
     hackarena3_cpp_wrapper
-    VERSION 0.1.0
+    VERSION 0.1.1
     LANGUAGES CXX
 )
 
-set(HACKARENA3_WRAPPER_VERSION "0.1.0")
+set(HACKARENA3_WRAPPER_VERSION "0.1.1")
 set(HACKARENA3_PACKAGE_NAME "hackarena3")
 
 set(CMAKE_CXX_STANDARD 20)
